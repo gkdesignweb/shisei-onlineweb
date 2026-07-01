@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>會員等級設定 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/>
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10 space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-black">會員等級 (Tiers)</h1>
+        <p class="text-sm text-slate-500 mt-1">調整每個等級對應的價格欄位、折扣、免運門檻與分期上限。儲存後立即生效於所有訂單與商品列表。</p>
+      </div>
+      <button id="newBtn" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增等級</button>
+    </div>
+
+    <div id="tierList" class="space-y-4"></div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 grid place-items-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+      <h3 class="font-bold mb-4">新增會員等級</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-500">代碼 (大寫英文/底線，e.g. PLATINUM)</label>
+          <input id="newCode" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">等級名稱</label>
+          <input id="newName" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">採用價格欄位</label>
+          <select id="newField" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg">
+            <option value="A">Price A (標準)</option>
+            <option value="B">Price B (優惠)</option>
+            <option value="C">Price C</option>
+            <option value="D">Price D</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="createTier()" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function load() {
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user || me.user.role !== 'MANAGER') {
+        document.body.innerHTML = '<div class="grid place-items-center min-h-screen"><p class="text-slate-600">需要 MANAGER 權限。</p></div>';
+        return;
+      }
+      const { tiers } = await fetch('/api/tiers/admin').then(r=>r.json());
+      document.getElementById('tierList').innerHTML = tiers.map(renderTier).join('');
+    }
+
+    function renderTier(t) {
+      return `
+      <section class="bg-white rounded-2xl shadow-sm p-6" data-code="${t.code}">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div class="flex items-center gap-3">
+            <span class="tier-pill ${t.code==='GOLD'?'tier-gold':'tier-bronze'}">${t.code}</span>
+            <h3 class="font-bold text-lg">${t.nameZh}</h3>
+            ${t.isActive ? '' : '<span class="text-xs text-slate-400">(停用)</span>'}
+          </div>
+          <div class="flex gap-2">
+            <button onclick="save('${t.code}')" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded">儲存</button>
+            <button onclick="del('${t.code}')" class="text-xs text-red-600">刪除</button>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <label class="block">
+            <span class="text-xs text-slate-500">顯示名稱</span>
+            <input name="nameZh" value="${esc(t.nameZh)}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">採用價格欄位</span>
+            <select name="priceField" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg">
+              <option value="A" ${t.priceField==='A'?'selected':''}>Price A</option>
+              <option value="B" ${t.priceField==='B'?'selected':''}>Price B</option>
+              <option value="C" ${t.priceField==='C'?'selected':''}>Price C</option>
+              <option value="D" ${t.priceField==='D'?'selected':''}>Price D</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">額外折扣 % (0-80)</span>
+            <input type="number" min="0" max="80" name="discountPercent" value="${t.discountPercent}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">免運門檻 (TWD)</span>
+            <input type="number" min="0" name="freeShippingThreshold" value="${t.freeShippingThreshold}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">信用卡分期上限</span>
+            <input type="number" min="0" max="36" name="creditInstallmentMax" value="${t.creditInstallmentMax}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">排序</span>
+            <input type="number" name="sortOrder" value="${t.sortOrder}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">年消費升級門檻 (TWD)</span>
+            <input type="number" min="0" name="yearlyUpgradeThreshold" value="${t.yearlyUpgradeThreshold ?? ''}" placeholder="留空 = 不自動升級" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">維持等級門檻 (TWD)</span>
+            <input type="number" min="0" name="yearlyRetainThreshold" value="${t.yearlyRetainThreshold ?? ''}" placeholder="留空 = 永久維持" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="block">
+            <span class="text-xs text-slate-500">升級後等級代碼</span>
+            <input name="nextTierCode" value="${t.nextTierCode ?? ''}" placeholder="例：GOLD" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </label>
+          <label class="flex items-center gap-2 mt-6">
+            <input type="checkbox" name="isActive" ${t.isActive?'checked':''}/>
+            <span class="text-sm">啟用</span>
+          </label>
+          <label class="block sm:col-span-2 lg:col-span-4">
+            <span class="text-xs text-slate-500">會員福利 (每行一項，會顯示於前台)</span>
+            <textarea name="benefits" rows="3" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg">${esc(t.benefits ?? '')}</textarea>
+          </label>
+        </div>
+      </section>`;
+    }
+
+    function esc(s) { return (s ?? '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c]); }
+
+    function getValues(code) {
+      const root = document.querySelector(`[data-code="${code}"]`);
+      const g = (n) => root.querySelector(`[name="${n}"]`);
+      const num = (n) => g(n).value ? parseInt(g(n).value, 10) : null;
+      return {
+        code,
+        nameZh: g('nameZh').value,
+        priceField: g('priceField').value,
+        discountPercent: parseInt(g('discountPercent').value, 10) || 0,
+        freeShippingThreshold: parseInt(g('freeShippingThreshold').value, 10) || 0,
+        creditInstallmentMax: parseInt(g('creditInstallmentMax').value, 10) || 0,
+        yearlyUpgradeThreshold: num('yearlyUpgradeThreshold'),
+        yearlyRetainThreshold:  num('yearlyRetainThreshold'),
+        nextTierCode: g('nextTierCode').value || null,
+        sortOrder: parseInt(g('sortOrder').value, 10) || 0,
+        isActive: g('isActive').checked,
+        benefits: g('benefits').value,
+      };
+    }
+
+    window.save = async (code) => {
+      const body = getValues(code);
+      const r = await fetch('/api/tiers/admin', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (r.ok) load(); else alert('儲存失敗：' + JSON.stringify(await r.json()));
+    };
+
+    window.del = async (code) => {
+      if (!confirm(`刪除 ${code}？`)) return;
+      const r = await fetch('/api/tiers/admin/' + code, { method:'DELETE' });
+      if (!r.ok) {
+        const d = await r.json();
+        if (d.error === 'tier_in_use') alert(`目前有 ${d.userCount} 位會員屬於此等級，無法刪除。`);
+        else alert('刪除失敗');
+        return;
+      }
+      load();
+    };
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+    window.closeModal = closeModal;
+    document.getElementById('newBtn').addEventListener('click', () => {
+      document.getElementById('modal').classList.remove('hidden');
+    });
+
+    window.createTier = async () => {
+      const body = {
+        code: document.getElementById('newCode').value.trim().toUpperCase(),
+        nameZh: document.getElementById('newName').value.trim(),
+        priceField: document.getElementById('newField').value,
+        discountPercent: 0,
+        freeShippingThreshold: 3000,
+        creditInstallmentMax: 6,
+        sortOrder: 99,
+        isActive: true,
+      };
+      if (!/^[A-Z_]+$/.test(body.code) || !body.nameZh) return alert('請填入代碼與名稱');
+      const r = await fetch('/api/tiers/admin', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (r.ok) { closeModal(); load(); } else alert('建立失敗');
+    };
+
+    load();
+  </script>
+  <script src="/js/admin-nav.js"></script>
+</body>
+</html>

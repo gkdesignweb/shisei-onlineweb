@@ -1,0 +1,509 @@
+// Postgres on Supabase. Value-set validation (Role, Tier, OrderStatus, etc.)
+// is enforced in app code — kept as String for portability and to avoid
+// migration churn when adding new statuses.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Role:   GUEST | MEMBER | SALES | FINANCE | WAREHOUSE | MANAGER
+// Tier:   BRONZE | GOLD
+// VerificationStatus: PENDING | APPROVED | REJECTED
+// OrderStatus: PENDING_PAYMENT | PAID | PROCESSING | SHIPPED | DELIVERED | CANCELLED | REFUNDED
+// PaymentMethod: CREDIT | CREDIT_INSTALLMENT | ATM | CVS
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String?
+  name               String
+  phone              String?
+  // High-level role: GUEST | MEMBER | STAFF + legacy values (MANAGER/SALES/FINANCE/WAREHOUSE)
+  role               String    @default("GUEST")
+  tier               String    @default("BRONZE")
+  verificationStatus String    @default("PENDING")
+  medicalLicenseNo   String?
+  clinicName         String?
+  clinicAddress      String?
+  lineUserId         String?   @unique
+  googleId           String?   @unique
+  // Password-reset OTP (6-digit, 15-min expiry, hashed at rest)
+  resetOtpHash       String?
+  resetOtpExpiresAt  DateTime?
+  resetOtpAttempts   Int       @default(0)
+  taxId              String?
+  companyTitle       String?
+  // Permission system additions:
+  isSuperAdmin       Boolean   @default(false)
+  isActive           Boolean   @default(true)
+  // Customer-side flag: when true, member can select 月繳 payment at checkout.
+  // Toggled by staff in /admin-customers.html.
+  canMonthlyPay      Boolean   @default(false)
+  staffRoleId        String?
+  staffRole          StaffRole? @relation(fields: [staffRoleId], references: [id])
+  // Email change verification (token-protected; 24h expiry)
+  pendingEmail            String?
+  pendingEmailTokenHash   String?
+  pendingEmailExpiresAt   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  orders             Order[]
+  cartItems          CartItem[]
+  auditLogs          AuditLog[]
+  wishlists          Wishlist[]
+}
+
+model StaffRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  // Comma-separated permission keys
+  permissions String   @default("")
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  nameZh    String
+  nameEn    String?
+  iconUrl   String?                   // optional custom icon (else auto by slug)
+  sortOrder Int       @default(0)
+  products  Product[]
+}
+
+model Bundle {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  nameZh        String
+  descriptionZh String?
+  imageUrl      String?
+  // Original total (struck-through). Admin can set manually or derive from items.
+  originalPrice Int
+  // Actual price the member pays.
+  bundlePrice   Int
+  isFeatured    Boolean       @default(false)
+  isActive      Boolean       @default(true)
+  sortOrder     Int           @default(0)
+  // 優惠期間: NULL = no constraint on that bound.
+  startsAt      DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         BundleItem[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+}
+
+model BundleItem {
+  id        String  @id @default(cuid())
+  bundleId  String
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  phone     String
+  name      String?
+  source    String   @default("callback")
+  note      String?
+  handled   Boolean  @default(false)
+  handledById String?
+  createdAt DateTime @default(now())
+}
+
+model HeroBanner {
+  id            String   @id @default(cuid())
+  name          String?                  // admin-friendly label for pickers
+  imageUrl      String
+  linkUrl       String?
+  captionHtml   String?                  // overlay text (HTML)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  placement     String   @default("CAROUSEL") // CAROUSEL = index.html slideshow | PAGE = head/foot picker
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  pagesAsHead   Page[]   @relation("PageHeadBanner")
+  pagesAsFoot   Page[]   @relation("PageFootBanner")
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  sku           String      @unique
+  nameZh        String
+  nameEn        String?
+  descriptionZh String?                   // short tagline shown next to price
+  longDescriptionHtml String?             // editorial body (HTML)
+  // JSON array: [{title, body}, ...] for the +/- accordion sections
+  accordionsJson      String      @default("[]")
+  videoUrl            String?             // YouTube/Vimeo URL or self-hosted file
+  imageUrl      String?                   // primary image (first in `images`)
+  images        String      @default("")  // CSV of image URLs (incl. primary)
+  categoryId    String
+  category      Category    @relation(fields: [categoryId], references: [id])
+  brandId       String?
+  brand         Brand?      @relation(fields: [brandId], references: [id])
+  priceA        Int                       // tier "A" price
+  priceB        Int                       // tier "B" price
+  priceC        Int?                      // tier "C" price
+  priceD        Int?                      // tier "D" price
+  priceOriginal Int?                      // MSRP shown struck-through; null → falls back to priceA
+  priceBulk     Int?                      // bulk price when qty >= bulkMinQty
+  bulkMinQty    Int?                      // threshold to unlock priceBulk
+  // Comma-separated labels: NEW,HOT,SALE,BUNDLE,etc.
+  labels        String      @default("")
+  stock         Int         @default(0)
+  isActive      Boolean     @default(true)
+  isFeatured    Boolean     @default(false) // surfaces in landing "bundle row"
+  // 檔期優惠 (PromotionPage) — toggles which sections this product appears in.
+  isGroupBuy        Boolean @default(false)
+  isMonthlySpecial  Boolean @default(false)
+  groupBuyTarget    Int?                   // total spots for group-buy progress bar
+  groupBuyCurrent   Int     @default(0)    // current joined; admin or order-hook can bump
+  // 優惠期間: shared by isGroupBuy + isMonthlySpecial. NULL = no constraint on that bound.
+  promoStartsAt     DateTime?
+  promoEndsAt       DateTime?
+  createdAt     DateTime    @default(now())
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  variants      ProductVariant[]
+  wishlists     Wishlist[]
+  bundleItems   BundleItem[]
+}
+
+model ProductVariant {
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name         String                       // e.g. "黑色 / Black" or "S"
+  // 'size' | 'color' | 'spec' | 'option' — drives UI grouping
+  optionType   String     @default("option")
+  sku          String?                      // optional variant SKU
+  imageUrl     String?                      // override image when this variant is picked
+  // Price overrides (null = inherit from parent product)
+  priceA       Int?
+  priceB       Int?
+  priceC       Int?
+  priceD       Int?
+  // Stock for this specific variant
+  stock        Int        @default(0)
+  sortOrder    Int        @default(0)
+  isActive     Boolean    @default(true)
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+model Brand {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  nameZh      String
+  nameEn      String?
+  // Wordmark = the brand-name rendered as an image (e.g. the word "AWAY"
+  // styled in their typeface). Shown at the top of the brand page when set.
+  wordmarkUrl String?
+  // Marketing tagline shown beside / under the wordmark.
+  tagline     String?
+  logoUrl     String?
+  introHtml   String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  products    Product[]
+}
+
+model Wishlist {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId, productId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Either productId OR bundleId must be set (validated in app code).
+  productId String?
+  product   Product?  @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  bundleId  String?
+  bundle    Bundle?  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  quantity  Int
+  createdAt DateTime @default(now())
+  @@unique([userId, productId, variantId, bundleId])
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  merchantTradeNo  String      @unique
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  status           String      @default("PENDING_PAYMENT")
+  paymentMethod    String
+  subtotal         Int
+  voucherCode      String?
+  voucherDiscount  Int         @default(0)
+  shippingFee      Int         @default(0)
+  total            Int
+  recipientName    String
+  recipientPhone   String
+  shippingAddress  String
+  recipientRegion  String?              // ShippingRegion.code (snapshot — region rules may change later)
+  invoiceTaxId     String?
+  invoiceTitle     String?
+  invoiceNumber    String?
+  invoiceIssuedAt  DateTime?
+  ecpayTradeNo     String?
+  ecpayPaymentDate DateTime?
+  ecpayRtnMsg      String?
+  atmBankCode      String?
+  atmVAccount      String?
+  cvsPaymentNo     String?
+  paymentExpireAt  DateTime?
+  trackingNumber   String?
+  shippedAt        DateTime?
+  // Internal notes by backend staff — never exposed to the customer.
+  staffNotes       String?
+  staffNotesUpdatedAt DateTime?
+  staffNotesUpdatedBy String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  items            OrderItem[]
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Bundle line items have productId=null and bundleId set.
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  bundleId    String?
+  bundle      Bundle? @relation(fields: [bundleId], references: [id])
+  sku         String
+  nameZh      String
+  variantName String?
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+}
+
+model ContentBlock {
+  id        String   @id @default(cuid())
+  // Hierarchical key used in HTML: data-content="landing.hero.title"
+  key       String   @unique
+  // Group for admin UI tabs: "landing", "nav", "footer", "checkout", etc.
+  group     String   @default("misc")
+  // Editable label shown to admins so they know what this block is
+  label     String?
+  valueZh   String
+  valueEn   String?
+  // text | richtext | image | url
+  kind      String   @default("text")
+  sortOrder Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model Tier {
+  id                    String   @id @default(cuid())
+  // Code referenced by User.tier. Treated as immutable after creation.
+  code                  String   @unique
+  nameZh                String
+  // Which Product price column this tier reads: "A", "B", "C" or "D"
+  priceField            String   @default("A")
+  // Extra percent discount applied on top of the price field. 0..100.
+  discountPercent       Int      @default(0)
+  // Order total above this gets free shipping (TWD)
+  freeShippingThreshold Int      @default(3000)
+  // Max number of credit-card installments allowed at checkout
+  creditInstallmentMax  Int      @default(12)
+  // Free-text bullet list of benefits, newline-separated
+  benefits              String?
+  description           String?
+  // Yearly-spend thresholds (TWD) — null means "no auto-rules"
+  yearlyUpgradeThreshold Int?              // spend X this year → upgrade to next tier
+  yearlyRetainThreshold  Int?              // spend X this year → keep this tier next year
+  // Next tier code that this one upgrades into when the threshold is met
+  nextTierCode           String?
+  sortOrder             Int      @default(0)
+  isActive              Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+  voucherLinks          TierVoucher[]
+}
+
+model Media {
+  id           String   @id @default(cuid())
+  filename     String   @unique          // disk filename (cuid + ext)
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  url          String                    // public URL e.g. /uploads/2026/06/abc.jpg
+  width        Int?
+  height       Int?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+}
+
+model Page {
+  id               String        @id @default(cuid())
+  slug             String        @unique
+  title            String
+  body             String                     // HTML — legacy / fallback when no blocks
+  metaTitle        String?                    // <title> override; falls back to title
+  metaDesc         String?                    // meta description
+  ogImage          String?                    // og:image URL
+  ogTitle          String?                    // og:title override
+  isPublished      Boolean       @default(true)
+  headBannerId     String?
+  footBannerId     String?
+  headBanner       HeroBanner?   @relation("PageHeadBanner", fields: [headBannerId], references: [id], onDelete: SetNull)
+  footBanner       HeroBanner?   @relation("PageFootBanner", fields: [footBannerId], references: [id], onDelete: SetNull)
+  // Per-page direct banner upload (independent of HeroBanner picker)
+  bannerEnabled    Boolean       @default(false)
+  bannerImageUrl   String?
+  bannerLinkUrl    String?
+  // Header / footer template overrides — null → use the platform default chrome
+  headerTemplateId String?
+  footerTemplateId String?
+  headerTemplate   PageTemplate? @relation("PageHeaderTemplate", fields: [headerTemplateId], references: [id], onDelete: SetNull)
+  footerTemplate   PageTemplate? @relation("PageFooterTemplate", fields: [footerTemplateId], references: [id], onDelete: SetNull)
+  blocks           PageBlock[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+// Reusable header / footer fragments selectable per Page.
+// 檔期優惠 (Seasonal Promotions) — single global page settings row.
+// Always seeded as id="default" so backend stays simple (one upsert).
+model PromotionPage {
+  id            String   @id @default("default")
+  isActive      Boolean  @default(false)        // whether /promotion.html shows the live banner
+  mainTitle     String   @default("檔期優惠專區")
+  subTitle      String   @default("限時優惠中")
+  startDate     DateTime?
+  endDate       DateTime?
+  monthlyBanner String?                          // banner URL above 本月優惠 grid
+  groupHeading  String   @default("團購優惠專區")
+  monthlyHeading String  @default("本月優惠專區")
+  updatedAt     DateTime @updatedAt
+}
+
+// Shipping regions with per-region free-shipping threshold + fee.
+// Checkout picks one (default: 本島) → its threshold overrides Tier.freeShippingThreshold.
+model ShippingRegion {
+  id           String   @id @default(cuid())
+  code         String   @unique          // MAIN | OUTER | REMOTE | …
+  nameZh       String                    // 台灣本島 / 離島 (澎金馬) / 偏遠地區
+  freeAtAmount Int      @default(3000)   // 訂單滿這個金額免運
+  shippingFee  Int      @default(120)    // 未達免運門檻時收的運費
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  isDefault    Boolean  @default(false)  // pre-selected on the checkout dropdown
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PageTemplate {
+  id            String   @id @default(cuid())
+  type          String                       // HEADER | FOOTER
+  name          String                       // admin-friendly label
+  html          String                       // raw HTML — admin authors with care
+  isDefault     Boolean  @default(false)     // optional flag (informational; not auto-applied)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  pagesAsHeader Page[]   @relation("PageHeaderTemplate")
+  pagesAsFooter Page[]   @relation("PageFooterTemplate")
+  @@index([type])
+}
+
+model PageBlock {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type      String                        // HERO | TEXT | IMAGE | PRODUCT_GRID | BANNER | CALLOUT | FAQ | EMBED
+  sortOrder Int      @default(0)
+  props     String                        // JSON-serialized block-type-specific config
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([pageId, sortOrder])
+}
+
+model NavItem {
+  id            String  @id @default(cuid())
+  label         String
+  href          String                  // "/p/about", "/shop.html", "#categories", external
+  order         Int     @default(100)
+  isActive      Boolean @default(true)
+  location      String  @default("MAIN") // MAIN | FOOTER | SHOP — which menu this row belongs to
+  // For FOOTER location only: which column the link appears under.
+  // SERVICE = 客戶服務, POLICY = 政策與條款, NONE (default) = flat (no column).
+  footerColumn  String  @default("SERVICE")
+}
+
+model Voucher {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  description    String?
+  // PERCENT (1..100) or FIXED (TWD)
+  type           String    @default("PERCENT")
+  value          Int
+  minOrderAmount Int       @default(0)
+  validFrom      DateTime?
+  validUntil     DateTime?
+  // Total usage cap across all users (null = unlimited)
+  usageLimit     Int?
+  usedCount      Int       @default(0)
+  // Per-user monthly limit: how many times each member can use this code per
+  // calendar month (null = unlimited). Enforced at checkout.
+  monthlyPerMember Int?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  // Tier eligibility: if any TierVoucher rows exist, only those tiers can use
+  // the code. If none, the voucher is available to all tiers (back-compat).
+  tierLinks      TierVoucher[]
+}
+
+model TierVoucher {
+  id        String  @id @default(cuid())
+  tierId    String
+  voucherId String
+  tier      Tier    @relation(fields: [tierId],    references: [id], onDelete: Cascade)
+  voucher   Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  @@unique([tierId, voucherId])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  group     String   @default("misc")
+  isSecret  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>內容管理 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/>
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10 space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-black">內容管理 (CMS)</h1>
+        <p class="text-sm text-slate-500 mt-1">編輯網站任何文案；前台會立即套用。也可在前台按右下角「✏️ 編輯內容」直接就地修改。</p>
+      </div>
+      <button id="newBlockBtn" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增區塊</button>
+    </div>
+
+    <div id="groups" class="space-y-6"></div>
+  </main>
+
+  <!-- New block modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 grid place-items-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+      <h3 class="font-bold mb-4">新增內容區塊</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-500">區塊名稱 *</label>
+          <input id="newLabel" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg" placeholder="例：首頁 Banner 文字"/>
+          <p class="text-[11px] text-slate-400 mt-1">給自己看的名字，方便日後找到這個區塊。</p>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">分組</label>
+          <select id="newGroup" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"></select>
+          <div id="newGroupNewWrap" class="hidden mt-2">
+            <input id="newGroupNew" placeholder="輸入新分組名稱 (例：promo)" class="w-full px-3 py-2 border border-teal-400 rounded-lg"/>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">內容 *</label>
+          <textarea id="newValue" rows="3" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg" placeholder="顯示在網頁上的文字"></textarea>
+        </div>
+        <details class="text-xs">
+          <summary class="cursor-pointer text-slate-500 hover:text-slate-900">進階設定（一般不需要修改）</summary>
+          <div class="mt-2 space-y-1">
+            <label class="text-xs text-slate-500">識別碼 (Key) — 留空會自動產生</label>
+            <input id="newKey" class="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs" placeholder="自動產生"/>
+            <p class="text-[11px] text-slate-400">給程式使用的內部代碼，例如 <code>landing.banner.text</code>。</p>
+          </div>
+        </details>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="createBlock()" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function load() {
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user || me.user.role !== 'MANAGER') {
+        document.body.innerHTML = '<div class="grid place-items-center min-h-screen"><p class="text-slate-600">需要 MANAGER 權限。<a href="/login.html" class="text-teal-600 underline ml-1">登入</a></p></div>';
+        return;
+      }
+
+      const { blocks } = await fetch('/api/content/admin').then(r=>r.json());
+      // Keys curated by /admin-home.html — hide from this generic editor to
+      // avoid duplicate maintenance surfaces. Edit these via 內容 → 首頁.
+      const HOME_OWNED = new Set([
+        // Site chrome
+        'site.logo.url', 'nav.brand',
+        // Hero (新 landing.* 命名)
+        'landing.hero.bg.image', 'landing.hero.bg.video',
+        'landing.hero.eyebrow', 'landing.hero.title1', 'landing.hero.title2',
+        'landing.hero.subtitle',
+        'landing.hero.ctaPrimary', 'landing.hero.ctaSecondary',
+        'landing.hero.trust1', 'landing.hero.trust2',
+        // Legacy hero / callback (舊命名，留著清空但不顯示)
+        'hero.title', 'hero.subtitle', 'hero.cta.label', 'hero.cta.href',
+        'callback.title', 'callback.body',
+        'landing.callback.title', 'landing.callback.subtitle',
+        // 熱銷 row
+        'landing.hot.eyebrow', 'landing.hot.title',
+        // Footer
+        'footer.copyright', 'footer.note',
+      ]);
+      const byGroup = {};
+      for (const b of blocks) {
+        if (HOME_OWNED.has(b.key)) continue;
+        (byGroup[b.group] ??= []).push(b);
+      }
+
+      const groups = document.getElementById('groups');
+      const groupHtml = Object.entries(byGroup).map(([group, items]) => `
+        <section class="bg-white rounded-2xl shadow-sm p-6">
+          <h2 class="font-bold text-lg mb-4 capitalize">${group}</h2>
+          <div class="space-y-4">
+            ${items.map(b => renderBlock(b)).join('')}
+          </div>
+        </section>
+      `).join('');
+      groups.innerHTML = `
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+          💡 首頁主視覺 / Header / Footer 等常用文字已搬至「<a href="/admin-home.html" class="text-teal-700 underline font-semibold">首頁</a>」編輯。這裡只列其他 CMS 區塊。
+        </div>
+        ${groupHtml || '<p class="text-center text-slate-400 py-12 bg-white rounded-2xl">沒有其他內容區塊。</p>'}`;
+    }
+
+    function renderBlock(b) {
+      const isLong = b.valueZh.length > 60 || b.valueZh.includes('\n');
+      const isImage = b.kind === 'image' || /\.(png|jpg|jpeg|svg|webp|gif)(\?|$)/i.test(b.valueZh) || /\.logo\.|\.image\./i.test(b.key);
+      const preview = isImage && b.valueZh
+        ? `<img src="${escapeHtml(b.valueZh)}" alt="" class="h-16 w-auto rounded border border-slate-200 mb-2 bg-white p-1"/>`
+        : '';
+      return `
+        <div class="grid lg:grid-cols-[1fr,2fr] gap-4 items-start border-t border-slate-100 pt-4 first:border-0 first:pt-0">
+          <div>
+            <p class="font-semibold text-sm">${b.label ?? b.key}</p>
+            <p class="text-xs text-slate-400 font-mono mt-1">${b.key}</p>
+          </div>
+          <div class="space-y-2">
+            ${preview}
+            ${isLong
+              ? `<textarea rows="3" data-key="${b.key}" data-group="${b.group}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500">${escapeHtml(b.valueZh)}</textarea>`
+              : `<input data-key="${b.key}" data-group="${b.group}" value="${escapeHtml(b.valueZh)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"/>`}
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="saveBlock('${b.key}')" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded">儲存</button>
+              ${isImage ? `<button onclick="pickMediaFor('${b.key}')" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded">📷 從媒體庫</button>` : ''}
+              <button onclick="deleteBlock('${b.key}')" class="text-xs text-red-600">刪除</button>
+              <span id="msg-${cssEscape(b.key)}" class="text-xs text-slate-500"></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.pickMediaFor = async (key) => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      const el = document.querySelector(`[data-key="${key}"]`);
+      el.value = url;
+      await saveBlock(key);
+      load();
+    };
+
+    function escapeHtml(s) { return s.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'})[c]); }
+    function cssEscape(s) { return s.replace(/[^a-z0-9]/gi, '_'); }
+
+    window.saveBlock = async (key) => {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      const group = el.dataset.group;
+      const r = await fetch('/api/content/admin', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ key, group, valueZh: el.value }),
+      });
+      const m = document.getElementById('msg-' + cssEscape(key));
+      m.textContent = r.ok ? '✓ 已儲存' : '✗ 儲存失敗';
+      m.className = 'text-xs ' + (r.ok ? 'text-teal-600' : 'text-red-600');
+      setTimeout(() => m.textContent = '', 2000);
+    };
+
+    window.deleteBlock = async (key) => {
+      if (!confirm(`刪除「${key}」？`)) return;
+      await fetch('/api/content/admin/' + encodeURIComponent(key), { method:'DELETE' });
+      load();
+    };
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+    window.closeModal = closeModal;
+    document.getElementById('newBlockBtn').addEventListener('click', async () => {
+      // Reset fields
+      document.getElementById('newLabel').value = '';
+      document.getElementById('newValue').value = '';
+      document.getElementById('newKey').value   = '';
+      document.getElementById('newGroupNew').value = '';
+      document.getElementById('newGroupNewWrap').classList.add('hidden');
+      // Populate group dropdown from existing groups
+      const { blocks } = await fetch('/api/content/admin').then(r => r.json());
+      const existing = [...new Set(blocks.map(b => b.group))].sort();
+      const sel = document.getElementById('newGroup');
+      sel.innerHTML =
+        existing.map(g => `<option value="${g}">${g}</option>`).join('') +
+        `<option value="__new__">＋ 新增分組…</option>`;
+      sel.value = existing[0] ?? '__new__';
+      if (sel.value === '__new__') document.getElementById('newGroupNewWrap').classList.remove('hidden');
+      document.getElementById('modal').classList.remove('hidden');
+    });
+
+    document.getElementById('newGroup').addEventListener('change', (e) => {
+      const wrap = document.getElementById('newGroupNewWrap');
+      wrap.classList.toggle('hidden', e.target.value !== '__new__');
+      if (e.target.value === '__new__') document.getElementById('newGroupNew').focus();
+    });
+
+    window.createBlock = async () => {
+      const groupSel = document.getElementById('newGroup').value;
+      const group = groupSel === '__new__'
+        ? (document.getElementById('newGroupNew').value.trim() || 'misc')
+        : groupSel;
+      const label = document.getElementById('newLabel').value.trim();
+      const valueZh = document.getElementById('newValue').value;
+      const customKey = document.getElementById('newKey').value.trim();
+      if (!label)   return alert('請輸入區塊名稱');
+      if (!valueZh) return alert('請輸入內容');
+      const body = { group, label, valueZh };
+      if (customKey) body.key = customKey;
+      const r = await fetch('/api/content/admin', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (r.ok) { closeModal(); load(); } else alert('建立失敗');
+    };
+
+    load();
+  </script>
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+</body>
+</html>

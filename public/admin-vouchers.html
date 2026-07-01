@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>優惠券 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0"><img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/><span class="font-bold tracking-wide">管理後台</span></a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">優惠券管理</h1>
+        <p class="text-sm text-slate-500 mt-1">建立 PERCENT (%) 或 FIXED (固定金額) 優惠碼。結帳時自動套用、扣抵後計算運費。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增優惠券</button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">代碼</th>
+            <th class="px-4 py-3 text-left">說明</th>
+            <th class="px-4 py-3 text-left">類型 / 折抵</th>
+            <th class="px-4 py-3 text-right">最低訂單</th>
+            <th class="px-4 py-3 text-left">有效期間</th>
+            <th class="px-4 py-3 text-right">使用</th>
+            <th class="px-4 py-3 text-left">適用等級</th>
+            <th class="px-4 py-3 text-center">啟用</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-lg">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增優惠券</h3>
+      <div class="grid sm:grid-cols-2 gap-3 text-sm">
+        <div><label class="text-xs text-slate-500">代碼 * (英數)</label>
+          <input id="fCode" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+        <div><label class="text-xs text-slate-500">類型 *</label>
+          <select id="fType" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg">
+            <option value="PERCENT">PERCENT (%)</option>
+            <option value="FIXED">FIXED (NT$)</option>
+          </select></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">說明</label>
+          <input id="fDesc" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">數值 *</label>
+          <input id="fValue" type="number" min="1" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">最低訂單金額</label>
+          <input id="fMin" type="number" min="0" value="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">有效開始</label>
+          <input id="fFrom" type="datetime-local" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">有效結束</label>
+          <input id="fUntil" type="datetime-local" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">總使用次數上限</label>
+          <input id="fLimit" type="number" min="1" placeholder="留空 = 無限" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">每位會員每月可用</label>
+          <input id="fMonthly" type="number" min="1" placeholder="留空 = 無限" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="flex items-center gap-2 mt-6"><input id="fActive" type="checkbox" checked/> 啟用</label></div>
+        <div class="sm:col-span-2">
+          <label class="text-xs text-slate-500 block mb-1">適用會員等級</label>
+          <div id="fTierBoxes" class="flex flex-wrap gap-3 text-sm border border-slate-200 rounded-lg p-3"></div>
+          <p class="text-[11px] text-slate-400 mt-1">全部不勾 = 所有等級皆可使用；勾選任一等級則僅該等級可用。</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    let EDIT_ID = null;
+    const F = (id) => document.getElementById(id);
+
+    let TIERS = [];
+
+    async function load() {
+      const [vRes, tRes] = await Promise.all([
+        fetch('/api/vouchers/admin').then(r=>r.json()),
+        fetch('/api/tiers/admin').then(r=>r.json()),
+      ]);
+      TIERS = tRes.tiers ?? [];
+      const vouchers = vRes.vouchers;
+      F('rows').innerHTML = vouchers.map(v => `
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-3 font-mono font-bold">${v.code}</td>
+          <td class="px-4 py-3 text-slate-600">${v.description ?? ''}</td>
+          <td class="px-4 py-3">${v.type === 'PERCENT' ? v.value + '%' : 'NT$ ' + v.value}</td>
+          <td class="px-4 py-3 text-right">NT$ ${v.minOrderAmount.toLocaleString()}</td>
+          <td class="px-4 py-3 text-xs text-slate-500">
+            ${v.validFrom  ? new Date(v.validFrom).toLocaleDateString('zh-TW')  : '—'} ~
+            ${v.validUntil ? new Date(v.validUntil).toLocaleDateString('zh-TW') : '—'}
+          </td>
+          <td class="px-4 py-3 text-right">${v.usedCount}${v.usageLimit ? ' / ' + v.usageLimit : ''}</td>
+          <td class="px-4 py-3 text-xs">${v.allowedTierCodes?.length ? v.allowedTierCodes.join(', ') : '全部'}</td>
+          <td class="px-4 py-3 text-center">${v.isActive ? '✓' : '✗'}</td>
+          <td class="px-4 py-3 text-right space-x-3">
+            <button onclick='openEdit(${JSON.stringify(v)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="del('${v.id}')" class="text-red-600 text-xs">刪除</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="9" class="text-center text-slate-500 py-6 text-sm">尚無優惠券。</td></tr>';
+    }
+
+    function renderTierBoxes(selectedCodes = []) {
+      document.getElementById('fTierBoxes').innerHTML = TIERS.map((t) => `
+        <label class="flex items-center gap-1">
+          <input type="checkbox" data-tier-code="${t.code}" ${selectedCodes.includes(t.code) ? 'checked' : ''}/>
+          <span class="tier-pill ${t.code==='GOLD'?'tier-gold':'tier-bronze'}">${t.code}</span>
+          <span>${t.nameZh}</span>
+        </label>`).join('') || '<p class="text-xs text-slate-400">尚未設定會員等級</p>';
+    }
+
+    window.openNew = () => { EDIT_ID = null; fill({type:'PERCENT',value:10,minOrderAmount:0,isActive:true}); F('modalTitle').textContent='新增優惠券'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (v) => { EDIT_ID = v.id; fill(v); F('modalTitle').textContent='編輯優惠券'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    function fill(v) {
+      F('fCode').value = v.code ?? '';
+      F('fDesc').value = v.description ?? '';
+      F('fType').value = v.type ?? 'PERCENT';
+      F('fValue').value = v.value ?? '';
+      F('fMin').value = v.minOrderAmount ?? 0;
+      F('fFrom').value  = v.validFrom  ? toLocal(v.validFrom)  : '';
+      F('fUntil').value = v.validUntil ? toLocal(v.validUntil) : '';
+      F('fLimit').value = v.usageLimit ?? '';
+      F('fMonthly').value = v.monthlyPerMember ?? '';
+      F('fActive').checked = v.isActive ?? true;
+      renderTierBoxes(v.allowedTierCodes ?? []);
+    }
+    function toLocal(iso) {
+      const d = new Date(iso);
+      const pad = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function toIso(local) { return local ? new Date(local).toISOString() : null; }
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        code: F('fCode').value.trim().toUpperCase(),
+        description: F('fDesc').value.trim() || null,
+        type: F('fType').value,
+        value: parseInt(F('fValue').value, 10),
+        minOrderAmount: parseInt(F('fMin').value, 10) || 0,
+        validFrom:  toIso(F('fFrom').value),
+        validUntil: toIso(F('fUntil').value),
+        usageLimit: F('fLimit').value ? parseInt(F('fLimit').value, 10) : null,
+        monthlyPerMember: F('fMonthly').value ? parseInt(F('fMonthly').value, 10) : null,
+        isActive: F('fActive').checked,
+        allowedTierCodes: [...document.querySelectorAll('#fTierBoxes input:checked')]
+          .map((cb) => cb.dataset.tierCode),
+      };
+      if (!body.code || !body.value) return alert('代碼與數值必填');
+      const url = EDIT_ID ? '/api/vouchers/admin/' + EDIT_ID : '/api/vouchers/admin';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) { const d = await r.json(); return alert(d.error === 'code_exists' ? '代碼已存在' : '儲存失敗'); }
+      closeModal(); load();
+    });
+
+    window.del = async (id) => {
+      if (!confirm('刪除此優惠券？(已使用過的訂單仍保留紀錄)')) return;
+      await fetch('/api/vouchers/admin/' + id, { method:'DELETE' });
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

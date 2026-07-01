@@ -1,0 +1,36 @@
+{
+  "name": "medical-supply-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "B2B 醫療耗材平台 (Taiwan) — ECPay + LINE + tiered pricing",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "postinstall": "prisma generate",
+    "build": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma db push --skip-generate && prisma generate && npm run db:seed",
+    "dev:fresh": "npm run db:reset && npm run dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^5.1.1",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "nodemailer": "^6.9.16",
+    "slugify": "^1.6.9",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

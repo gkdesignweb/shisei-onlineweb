@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>後台總覽 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5 hidden md:block"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div class="flex items-baseline justify-between flex-wrap gap-3">
+      <h1 class="text-2xl font-black">總覽</h1>
+      <p id="asOf" class="text-xs text-slate-400"></p>
+    </div>
+
+    <!-- KPI cards -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">本月營收</p>
+        <p class="text-2xl font-black mt-1" id="kpiRev">—</p>
+        <p class="text-xs mt-1" id="kpiRevDelta">&nbsp;</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">本月訂單</p>
+        <p class="text-2xl font-black mt-1" id="kpiOrders">—</p>
+        <p class="text-xs text-slate-400 mt-1" id="kpiOrdersLast">&nbsp;</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">待付款訂單</p>
+        <p class="text-2xl font-black mt-1 text-amber-600" id="kpiPending">—</p>
+        <a href="/admin-orders.html?status=PENDING_PAYMENT" class="text-xs text-teal-600 hover:underline mt-1 inline-block">查看 →</a>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">待審核會員</p>
+        <p class="text-2xl font-black mt-1 text-rose-600" id="kpiMembers">—</p>
+        <a href="#pending-section" class="text-xs text-teal-600 hover:underline mt-1 inline-block">處理 →</a>
+      </div>
+    </section>
+
+    <!-- Average-spend trend (30 days) -->
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 class="font-bold">每筆平均消費 <span class="text-xs text-slate-400">近 30 天</span></h2>
+        <p id="avgSpendAvg" class="text-xs text-slate-500"></p>
+      </div>
+      <svg id="avgSpendChart" class="w-full" viewBox="0 0 720 200" preserveAspectRatio="none"></svg>
+    </section>
+
+    <!-- Top SKUs + Low stock -->
+    <section class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold">熱銷 SKU <span class="text-xs text-slate-400">近 30 天</span></h2>
+        </div>
+        <div id="topSkus"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold">低庫存警示 <span class="text-xs text-slate-400">≤ 10 件</span></h2>
+          <a href="/admin-products.html" class="text-xs text-teal-600 hover:underline">補貨 →</a>
+        </div>
+        <div id="lowStock"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+    </section>
+
+    <!-- Top customers (month + year) -->
+    <section class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="font-bold mb-3">Top 10 消費會員 <span class="text-xs text-slate-400">本月</span></h2>
+        <div id="topCustomersMonth"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="font-bold mb-3">Top 10 消費會員 <span class="text-xs text-slate-400">本年度</span></h2>
+        <div id="topCustomersYear"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+    </section>
+
+    <!-- Abandoned carts + recent orders -->
+    <section class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold">放棄購物車 <span class="text-xs text-slate-400">> 24 小時</span></h2>
+        </div>
+        <div id="abandoned"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold">最近訂單</h2>
+          <a href="/admin-orders.html" class="text-xs text-teal-600 hover:underline">全部 →</a>
+        </div>
+        <div id="recentOrders"><p class="text-sm text-slate-400">載入中…</p></div>
+      </div>
+    </section>
+
+    <!-- Pending members (with quick verify buttons) -->
+    <section id="pending-section" class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold mb-3">待審核會員</h2>
+      <div id="pending"><p class="text-sm text-slate-400">載入中…</p></div>
+    </section>
+  </main>
+
+  <script>
+    const NF = (n) => 'NT$ ' + (n ?? 0).toLocaleString();
+    const F = (id) => document.getElementById(id);
+
+    // SVG line chart for the 30-day average-spend trend. Inline so the page
+    // stays dependency-free; no chart library needed.
+    function drawAvgSpend(series) {
+      const svg = F('avgSpendChart');
+      const W = 720, H = 200, P = 28;
+      const max = Math.max(1, ...series.map((s) => s.avg));
+      const step = (W - P * 2) / (series.length - 1 || 1);
+      const points = series.map((s, i) => {
+        const x = P + i * step;
+        const y = H - P - (s.avg / max) * (H - P * 2);
+        return [x, y, s];
+      });
+      const path = points.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
+      const area = `M${points[0][0]},${H-P} ` + points.map(([x,y]) => `L${x},${y}`).join(' ') + ` L${points[points.length-1][0]},${H-P} Z`;
+      const axis = `<line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#e2e8f0" stroke-width="1"/>`;
+      svg.innerHTML = `
+        ${axis}
+        <path d="${area}" fill="rgba(13,148,136,.12)"/>
+        <path d="${path}" stroke="#0d9488" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        ${points.map(([x, y, s]) => `<circle cx="${x}" cy="${y}" r="3" fill="#0d9488"><title>${s.date}: ${NF(s.avg)} avg (${s.orders} orders)</title></circle>`).join('')}
+        <text x="${W-P}" y="${H-6}" text-anchor="end" font-size="10" fill="#94a3b8">今日</text>
+        <text x="${P}"   y="${H-6}" font-size="10" fill="#94a3b8">30 天前</text>`;
+    }
+
+    async function load() {
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user || me.user.role === 'MEMBER' || me.user.role === 'GUEST') {
+        document.body.innerHTML = '<div class="grid place-items-center min-h-screen"><p class="text-slate-600">需要員工權限才能存取。<a href="/login.html" class="text-teal-600 underline ml-1">登入</a></p></div>';
+        return;
+      }
+      F('asOf').textContent = '更新於 ' + new Date().toLocaleString('zh-TW');
+      const r = await fetch('/api/admin/dashboard');
+      if (!r.ok) { F('topSkus').innerHTML = '<p class="text-sm text-red-500">無權限</p>'; return; }
+      const d = await r.json();
+
+      // KPI cards
+      F('kpiRev').textContent = NF(d.revenue.thisMonth);
+      const dp = d.revenue.deltaPct;
+      F('kpiRevDelta').innerHTML = dp == null
+        ? '<span class="text-slate-400">上月無基準</span>'
+        : `<span class="${dp >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${dp >= 0 ? '▲' : '▼'} ${Math.abs(dp).toFixed(1)}%</span> <span class="text-slate-400">vs 上月 ${NF(d.revenue.lastMonth)}</span>`;
+      F('kpiOrders').textContent = d.orderCounts.thisMonth;
+      F('kpiOrdersLast').textContent = `上月 ${d.orderCounts.lastMonth}　·　已出貨 ${d.orderCounts.shippedThisMonth}`;
+      F('kpiPending').textContent = d.orderCounts.pendingPayment;
+      F('kpiMembers').textContent = d.pendingMembers;
+
+      // Top SKUs
+      F('topSkus').innerHTML = d.topSkus.length === 0
+        ? '<p class="text-sm text-slate-400">近 30 天暫無訂單。</p>'
+        : `<table class="w-full text-sm">
+            <thead><tr class="text-left text-xs text-slate-500 border-b border-slate-100">
+              <th class="py-2">#</th><th>SKU</th><th>商品</th><th class="text-right">數量</th><th class="text-right">營收</th></tr></thead>
+            <tbody>${d.topSkus.map((s, i) => `
+              <tr class="border-b border-slate-50">
+                <td class="py-2 text-slate-400 text-xs">${i+1}</td>
+                <td class="font-mono text-xs">${s.sku}</td>
+                <td class="font-medium">${s.nameZh}</td>
+                <td class="text-right">${s.qty}</td>
+                <td class="text-right font-semibold">${NF(s.revenue)}</td>
+              </tr>`).join('')}</tbody></table>`;
+
+      // Avg-spend chart
+      drawAvgSpend(d.avgSpendSeries);
+      F('avgSpendAvg').textContent = (() => {
+        const totals = d.avgSpendSeries.filter((p) => p.orders > 0);
+        if (!totals.length) return '近 30 天無付款訂單';
+        const overall = Math.round(totals.reduce((s, p) => s + p.avg, 0) / totals.length);
+        const orderSum = d.avgSpendSeries.reduce((s, p) => s + p.orders, 0);
+        return `30 天平均：${NF(overall)} (共 ${orderSum} 筆)`;
+      })();
+
+      // Top customers
+      const renderTop = (rows) => rows.length === 0
+        ? '<p class="text-sm text-slate-400">本期暫無付款訂單。</p>'
+        : `<ol class="space-y-2 text-sm">${rows.map((c, i) => `
+          <li class="flex items-center gap-3">
+            <span class="w-6 text-slate-400 text-xs">#${i+1}</span>
+            <a href="/admin-customer-detail.html?id=${c.userId}" class="flex-1 font-medium hover:text-teal-600 truncate">${c.name}</a>
+            <span class="font-semibold text-teal-700">${NF(c.total)}</span>
+          </li>`).join('')}</ol>`;
+      F('topCustomersMonth').innerHTML = renderTop(d.topCustomersMonth);
+      F('topCustomersYear').innerHTML  = renderTop(d.topCustomersYear);
+
+      // Low stock
+      F('lowStock').innerHTML = d.lowStock.length === 0
+        ? '<p class="text-sm text-slate-400">無低庫存商品。</p>'
+        : `<ul class="divide-y divide-slate-100">${d.lowStock.map((p) => `
+            <li class="py-2 flex items-center gap-3">
+              <div class="w-10 h-10 bg-slate-100 rounded shrink-0 overflow-hidden">${p.imageUrl ? `<img src="${p.imageUrl}" class="w-full h-full object-cover"/>` : ''}</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">${p.nameZh}</p>
+                <p class="font-mono text-xs text-slate-400">${p.sku}</p>
+              </div>
+              <span class="text-sm font-bold ${p.stock === 0 ? 'text-rose-600' : 'text-amber-600'}">${p.stock}</span>
+            </li>`).join('')}</ul>`;
+
+      // Abandoned carts
+      F('abandoned').innerHTML = d.abandonedCarts.length === 0
+        ? '<p class="text-sm text-slate-400">沒有放棄的購物車。</p>'
+        : `<ul class="divide-y divide-slate-100">${d.abandonedCarts.map((c) => `
+            <li class="py-2 text-sm">
+              <p class="font-medium">${c.user?.clinicName || c.user?.name || '會員'}</p>
+              <p class="text-xs text-slate-500">${c.user?.email ?? ''}</p>
+            </li>`).join('')}</ul>`;
+
+      // Recent orders
+      F('recentOrders').innerHTML = d.recentOrders.length === 0
+        ? '<p class="text-sm text-slate-400">尚無訂單。</p>'
+        : `<ul class="divide-y divide-slate-100">${d.recentOrders.map((o) => `
+            <li class="py-2 flex items-center gap-3 text-sm">
+              <a href="/admin-orders.html?focus=${o.id}" class="font-mono text-xs text-teal-700 hover:underline">${o.merchantTradeNo}</a>
+              <span class="flex-1 truncate">${o.user.clinicName || o.user.name}</span>
+              <span class="text-xs text-slate-500">${statusBadge(o.status)}</span>
+              <span class="font-semibold">${NF(o.total)}</span>
+            </li>`).join('')}</ul>`;
+
+      loadPending();
+    }
+
+    function statusBadge(s) {
+      const map = { PENDING_PAYMENT: '待付款', PAID: '已付款', SHIPPED: '已出貨', COMPLETED: '已完成', CANCELLED: '已取消' };
+      return map[s] || s;
+    }
+
+    async function loadPending() {
+      const r = await fetch('/api/admin/members/pending');
+      if (!r.ok) { F('pending').innerHTML='<p class="text-sm text-slate-500">無權限</p>'; return; }
+      const { users } = await r.json();
+      if (users.length === 0) { F('pending').innerHTML='<p class="text-sm text-slate-500">沒有待審核會員。</p>'; return; }
+      F('pending').innerHTML = `<table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-slate-500 border-b border-slate-200">
+          <th class="py-2">姓名</th><th>診所</th><th>執照號</th><th>Email</th><th class="text-right">操作</th></tr></thead>
+        <tbody>${users.map(u => `
+          <tr class="border-b border-slate-100">
+            <td class="py-3 font-medium">${u.name}</td>
+            <td>${u.clinicName ?? '—'}</td>
+            <td class="font-mono text-xs">${u.medicalLicenseNo ?? '—'}</td>
+            <td class="text-xs">${u.email}</td>
+            <td class="text-right space-x-2">
+              <button onclick="verify('${u.id}','APPROVED','BRONZE')" class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">通過 Bronze</button>
+              <button onclick="verify('${u.id}','APPROVED','GOLD')" class="text-xs bg-amber-600 text-white px-2 py-1 rounded">通過 Gold</button>
+              <button onclick="verify('${u.id}','REJECTED')" class="text-xs bg-red-600 text-white px-2 py-1 rounded">拒絕</button>
+            </td>
+          </tr>`).join('')}</tbody></table>`;
+    }
+
+    window.verify = async (id, decision, tier) => {
+      await fetch(`/api/admin/members/${id}/verify`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ decision, tier }),
+      });
+      loadPending();
+    };
+
+    load();
+  </script>
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+</body>
+</html>

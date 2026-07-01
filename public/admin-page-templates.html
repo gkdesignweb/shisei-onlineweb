@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Header / Footer 模板 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-10">
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">Header 模板</h1>
+          <p class="text-sm text-slate-500 mt-1">前台頁面頂部 Header 模板。在「頁面 / 選單」編輯頁面時可選擇要套用哪一份。</p>
+        </div>
+        <button onclick="openNew('HEADER')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增 Header 模板</button>
+      </div>
+      <div id="headerRows" class="space-y-3"></div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">Footer 模板</h1>
+          <p class="text-sm text-slate-500 mt-1">前台頁面底部 Footer 模板。</p>
+        </div>
+        <button onclick="openNew('FOOTER')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增 Footer 模板</button>
+      </div>
+      <div id="footerRows" class="space-y-3"></div>
+    </section>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增模板</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-500">類型</label>
+          <select id="fType" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white">
+            <option value="HEADER">HEADER</option>
+            <option value="FOOTER">FOOTER</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">名稱 *</label>
+          <input id="fName" placeholder="例：簡潔深色 / 含 LINE 按鈕" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+            <label class="text-xs text-slate-500">HTML 內容 *</label>
+            <div class="flex items-center gap-2 text-xs">
+              <label class="flex items-center gap-1 text-slate-500">
+                <input id="fLivePreview" type="checkbox" checked/> 即時預覽
+              </label>
+              <label class="text-slate-500">載入範本：</label>
+              <select id="fStarter" class="text-xs border border-slate-200 rounded px-2 py-1 bg-white">
+                <option value="">— 從空白開始 —</option>
+              </select>
+              <button type="button" id="applyStarter" class="text-xs bg-slate-900 text-white px-2 py-1 rounded">套用</button>
+            </div>
+          </div>
+          <textarea id="fHtml" rows="14" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs leading-relaxed"></textarea>
+          <p class="text-[11px] text-slate-400 mt-1">可使用 Tailwind class 與 <code>data-content="key"</code>（會由內容區塊自動帶入）。注意 HTML 的安全性。</p>
+          <!-- Live preview: HTML rendered in a sandboxed iframe with the same
+               Tailwind + Noto Sans TC + /css/style.css stack the public /p/:slug
+               page uses, so the preview matches the live render 1:1. -->
+          <div id="fPreviewWrap" class="mt-3">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-xs text-slate-500 font-semibold">預覽（與前台 /p/:slug 相同樣式）</p>
+              <span id="fPreviewSize" class="text-[11px] text-slate-400"></span>
+            </div>
+            <!-- allow-scripts lets Tailwind CDN run inside the iframe so
+                 classes get real styles. Omitting allow-same-origin keeps
+                 the preview from touching the parent's cookies/storage. -->
+            <iframe id="fPreview" sandbox="allow-scripts"
+              class="w-full h-[480px] border border-slate-200 rounded-lg bg-white"></iframe>
+            <p id="fPreviewHint" class="text-[11px] text-slate-400 mt-1">提示：第一次載入需 1~2 秒等 Tailwind CDN 編譯，之後即時更新。</p>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-xs">
+          <input id="fDefault" type="checkbox"/> 標記為預設（資訊用，不會自動套用）
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script>
+    // Starter library — 4 HEADER variants + 4 FOOTER variants. Pick from the
+    // 「載入範本」 dropdown to populate the HTML field as a starting point.
+    const STARTERS = {
+      HEADER: [
+        { id: 'platform-default', label: '預設樣式 (平台原樣)', html:
+`<header class="border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-3">
+    <a href="/" class="flex items-center gap-2">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-9 w-auto hidden"/>
+      <span data-logo-fallback class="w-9 h-9 rounded-full bg-teal-500 grid place-items-center text-white font-bold">M</span>
+    </a>
+    <nav id="mainNav" class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700"></nav>
+    <div class="flex items-center gap-3">
+      <a href="/login.html" data-auth-anon class="text-sm font-medium text-slate-700 hover:text-teal-600">登入</a>
+      <a href="/register.html" data-auth-anon class="text-sm font-semibold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800">註冊會員</a>
+      <a data-auth-user href="/account.html" class="text-sm font-semibold bg-teal-600 text-white px-4 py-2 rounded-full hover:bg-teal-700" style="display:none"><span data-user-name>會員資訊</span></a>
+    </div>
+  </div>
+</header>` },
+        { id: 'minimal-centered', label: '居中極簡', html:
+`<header class="border-b border-slate-200">
+  <div class="max-w-5xl mx-auto px-6 py-6 text-center">
+    <a href="/" class="inline-flex items-center gap-2">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-10 w-auto hidden"/>
+      <span data-logo-fallback class="w-10 h-10 rounded-full bg-teal-500 grid place-items-center text-white font-bold">M</span>
+    </a>
+    <nav id="mainNav" class="mt-4 flex justify-center gap-6 text-sm font-medium text-slate-700"></nav>
+  </div>
+</header>` },
+        { id: 'dark-with-cart', label: '深色 + 購物車', html:
+`<header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+    <a href="/" class="flex items-center gap-2">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+      
+    </a>
+    <nav id="mainNav" class="hidden md:flex items-center gap-6 text-sm font-medium"></nav>
+    <div class="flex items-center gap-3">
+      <a href="/shop.html" class="text-sm hover:text-teal-300">所有商品</a>
+      <a href="/account.html" class="text-sm hover:text-teal-300">會員中心</a>
+      <button data-mini-cart class="bg-teal-500 text-white text-sm font-semibold px-4 py-2 rounded-full hover:bg-teal-600">🛒 <span id="cartCount">0</span></button>
+    </div>
+  </div>
+</header>` },
+        { id: 'logo-only-sticky', label: '黏性 Logo Only', html:
+`<header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+      
+    </a>
+    <a href="/shop.html" class="text-sm font-semibold text-teal-600 hover:text-teal-700">前往商城 →</a>
+  </div>
+</header>` },
+      ],
+      FOOTER: [
+        { id: 'platform-default', label: '預設樣式 (平台原樣)', html:
+`<footer class="border-t border-slate-200 py-8 mt-16">
+  <div class="max-w-7xl mx-auto px-6 text-sm text-slate-500 flex flex-wrap justify-between gap-4">
+    <p data-content="footer.copyright">© 2026 資生國際 Shisei Dental Co., Ltd.</p>
+    <p data-content="footer.note">本平台僅對通過審核之醫療專業人員開放。</p>
+  </div>
+</footer>` },
+        { id: 'four-column', label: '四欄分類', html:
+`<footer class="bg-slate-900 text-slate-300 mt-16">
+  <div class="max-w-7xl mx-auto px-6 py-12 grid sm:grid-cols-2 md:grid-cols-4 gap-8 text-sm">
+    <div>
+      <h4 class="font-bold text-white mb-3">關於我們</h4>
+      <ul class="space-y-2 text-slate-400">
+        <li><a href="/p/about" class="hover:text-teal-400">公司簡介</a></li>
+        <li><a href="/p/contact" class="hover:text-teal-400">聯絡資訊</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-bold text-white mb-3">客戶服務</h4>
+      <ul class="space-y-2 text-slate-400">
+        <li><a href="/p/faq" class="hover:text-teal-400">常見問題</a></li>
+        <li><a href="/p/shipping" class="hover:text-teal-400">運送方式</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-bold text-white mb-3">政策與條款</h4>
+      <ul class="space-y-2 text-slate-400">
+        <li><a href="/p/privacy" class="hover:text-teal-400">隱私政策</a></li>
+        <li><a href="/p/terms" class="hover:text-teal-400">使用條款</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-bold text-white mb-3">付款方式</h4>
+      <p class="text-xs text-slate-400">VISA · MasterCard · JCB · ATM · 超商代碼 · LINE Pay</p>
+    </div>
+  </div>
+  <div class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+    <span data-content="footer.copyright">© 2026 資生國際 Shisei Dental Co., Ltd. 統一編號: 12345678</span>
+  </div>
+</footer>` },
+        { id: 'minimal-one-line', label: '極簡單行', html:
+`<footer class="border-t border-slate-100 py-6 mt-12">
+  <div class="max-w-5xl mx-auto px-6 text-center text-xs text-slate-400">
+    <p data-content="footer.copyright">© 2026 資生國際 Shisei Dental Co., Ltd.</p>
+  </div>
+</footer>` },
+        { id: 'with-contact', label: '聯絡資訊 + 社群', html:
+`<footer class="bg-slate-50 border-t border-slate-200 mt-16">
+  <div class="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-3 gap-6 text-sm">
+    <div>
+      <p class="font-bold text-slate-900 mb-2">聯絡我們</p>
+      <p class="text-slate-600">📞 客服專線：(02) 1234-5678</p>
+      <p class="text-slate-600">✉️ service@example.com</p>
+      <p class="text-slate-500 text-xs mt-1">週一至週五 9:00-18:00</p>
+    </div>
+    <div>
+      <p class="font-bold text-slate-900 mb-2">追蹤我們</p>
+      <div class="flex gap-3">
+        <a href="#" class="text-2xl">📱</a>
+        <a href="#" class="text-2xl">💬</a>
+        <a href="#" class="text-2xl">📷</a>
+      </div>
+    </div>
+    <div>
+      <p class="font-bold text-slate-900 mb-2">付款方式</p>
+      <p class="text-xs text-slate-500">VISA · MasterCard · JCB · ATM · 超商 · LINE Pay</p>
+    </div>
+  </div>
+  <div class="border-t border-slate-200 py-3 text-center text-xs text-slate-400">
+    <span data-content="footer.copyright">© 2026 資生國際 Shisei Dental Co., Ltd.</span>
+  </div>
+</footer>` },
+      ],
+    };
+
+    let EDIT_ID = null;
+    const F = (id) => document.getElementById(id);
+    const BASE = '/api/admin/pages-mgmt/templates';
+
+    function syncStarterList() {
+      const type = F('fType').value;
+      const list = STARTERS[type] || [];
+      F('fStarter').innerHTML = '<option value="">— 從空白開始 —</option>' +
+        list.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    }
+
+    async function load() {
+      const [hd, ft] = await Promise.all([
+        fetch(BASE + '?type=HEADER').then(r=>r.json()),
+        fetch(BASE + '?type=FOOTER').then(r=>r.json()),
+      ]);
+      F('headerRows').innerHTML = render(hd.templates);
+      F('footerRows').innerHTML = render(ft.templates);
+    }
+    function render(list) {
+      if (!list.length) return '<p class="text-center text-slate-500 py-8 bg-white rounded-2xl">尚未建立模板。</p>';
+      return list.map(t => `
+        <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold">${t.name}${t.isDefault ? ' <span class="text-xs text-teal-600">[預設]</span>' : ''}</p>
+            <p class="font-mono text-xs text-slate-400 truncate mt-1">${(t.html||'').replace(/</g,'&lt;').slice(0,140)}…</p>
+          </div>
+          <div class="flex flex-col gap-2 shrink-0">
+            <button onclick='openEdit(${JSON.stringify(t)})' class="text-xs text-teal-600">編輯</button>
+            <button onclick="del('${t.id}')" class="text-xs text-red-600">刪除</button>
+          </div>
+        </div>`).join('');
+    }
+
+    window.openNew = (type) => { EDIT_ID = null; fill({ type, name:'', html:'', isDefault:false }); F('modalTitle').textContent='新增 ' + type + ' 模板'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (t) => { EDIT_ID = t.id; fill(t); F('modalTitle').textContent='編輯 ' + t.type + ' 模板'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+    function fill(t) {
+      F('fType').value = t.type ?? 'HEADER';
+      F('fName').value = t.name ?? '';
+      F('fHtml').value = t.html ?? '';
+      F('fDefault').checked = !!t.isDefault;
+      syncStarterList();
+      F('fStarter').value = '';
+      schedulePreview();
+    }
+
+    // Live preview: render the textarea HTML in a sandboxed iframe with the
+    // same Tailwind CDN + Noto Sans TC the public site uses. Debounced to keep
+    // typing smooth. Site content blocks (data-content) are hydrated against
+    // /api/content so logos / brand name etc. render too.
+    let CONTENT_MAP = null;
+    async function ensureContentMap() {
+      if (CONTENT_MAP) return CONTENT_MAP;
+      try {
+        const r = await fetch('/api/content', { cache: 'no-store' });
+        const d = r.ok ? await r.json() : { content: {} };
+        CONTENT_MAP = d.content || {};
+      } catch { CONTENT_MAP = {}; }
+      return CONTENT_MAP;
+    }
+    let previewTimer = null;
+    function schedulePreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(renderPreview, 200);
+    }
+    async function renderPreview() {
+      const iframe = F('fPreview');
+      const wrap   = F('fPreviewWrap');
+      if (!F('fLivePreview').checked) { wrap.classList.add('hidden'); return; }
+      wrap.classList.remove('hidden');
+      const html = F('fHtml').value || '';
+      F('fPreviewSize').textContent = `${html.length.toLocaleString()} chars`;
+      const contentMap = await ensureContentMap();
+      // Pull live theme color from /api/site so accents match the front-end.
+      let themeColor = '#0d9488';
+      try {
+        const s = await fetch('/api/site', { cache: 'no-store' }).then(r=>r.json());
+        if (s.themeColor) themeColor = s.themeColor;
+      } catch {}
+      // Origin so /css/style.css resolves inside the null-origin sandbox.
+      const origin = location.origin;
+      const doc = `<!doctype html><html lang="zh-TW"><head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <script src="https://cdn.tailwindcss.com"><\/script>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+        <link rel="stylesheet" href="${origin}/css/style.css"/>
+        <style>
+          :root { --theme-color: ${themeColor}; }
+          html, body { margin:0; padding:0; min-height:100%; font-family:'Noto Sans TC', system-ui, -apple-system, sans-serif; background:#fff; color:#0f172a; }
+          #__preview_loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#fff; color:#94a3b8; font-size:13px; transition:opacity .25s; }
+          #__preview_loading.gone { opacity:0; pointer-events:none; }
+        </style>
+      </head><body class="font-sans bg-white text-slate-900 antialiased">
+        <div id="__preview_loading">載入中…</div>
+        ${html}
+        <script>
+          (function () {
+            const map = ${JSON.stringify(contentMap)};
+            // Hydrate data-content markers exactly like /js/content.js does.
+            document.querySelectorAll('[data-content]').forEach((el) => {
+              const k = el.dataset.content; const v = map[k];
+              if (v === undefined) return;
+              if (el.dataset.contentAttr) { if (v) el.setAttribute(el.dataset.contentAttr, v); }
+              else el.innerHTML = String(v).replace(/\\n/g, '<br>');
+            });
+            // Logo swap mirrors content.js
+            if (map['site.logo.url']) {
+              document.querySelectorAll('img[data-content="site.logo.url"]').forEach((el) => el.classList.remove('hidden'));
+              document.querySelectorAll('[data-logo-fallback]').forEach((el) => el.classList.add('hidden'));
+            }
+            // Drop the loading veil after Tailwind has had a tick to compile.
+            const veil = document.getElementById('__preview_loading');
+            requestAnimationFrame(() => setTimeout(() => veil && veil.classList.add('gone'), 350));
+          })();
+        <\/script>
+      </body></html>`;
+      iframe.srcdoc = doc;
+    }
+    F('fHtml').addEventListener('input', schedulePreview);
+    F('fType').addEventListener('change', schedulePreview);
+    F('fLivePreview').addEventListener('change', renderPreview);
+    F('fType').addEventListener('change', syncStarterList);
+    F('applyStarter').addEventListener('click', () => {
+      const id = F('fStarter').value;
+      if (!id) return alert('請先選擇一個範本');
+      const starter = (STARTERS[F('fType').value] || []).find(s => s.id === id);
+      if (!starter) return;
+      if (F('fHtml').value.trim() && !confirm('將覆蓋目前 HTML 內容，繼續？')) return;
+      F('fHtml').value = starter.html;
+      if (!F('fName').value.trim()) F('fName').value = starter.label;
+      schedulePreview();
+    });
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        type: F('fType').value,
+        name: F('fName').value.trim(),
+        html: F('fHtml').value,
+        isDefault: F('fDefault').checked,
+      };
+      if (!body.name) return alert('請填入名稱');
+      const r = await fetch(EDIT_ID ? BASE + '/' + EDIT_ID : BASE, {
+        method: EDIT_ID ? 'PUT' : 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) return alert('儲存失敗');
+      closeModal(); load();
+    });
+    window.del = async (id) => {
+      if (!confirm('刪除此模板？已套用此模板的頁面會回復為預設樣式。')) return;
+      await fetch(BASE + '/' + id, { method:'DELETE' });
+      load();
+    };
+    load();
+  </script>
+</body>
+</html>

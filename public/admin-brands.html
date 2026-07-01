@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>品牌管理 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">品牌管理</h1>
+        <p class="text-sm text-slate-500 mt-1">設定我們經銷的品牌；商品可以指派品牌，前台會出現品牌頁。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增品牌</button>
+    </div>
+
+    <div id="rows" class="space-y-3"></div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增品牌</h3>
+      <div class="space-y-5 text-sm">
+        <!-- 品牌名稱與 Logo 群組 -->
+        <fieldset class="border border-slate-200 rounded-xl p-4">
+          <legend class="px-2 text-xs font-bold text-slate-600">品牌名稱與識別</legend>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2"><label class="text-xs text-slate-500">品牌名稱 *</label>
+              <input id="fNameZh" placeholder="例：BISCO 美國博士可" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+              <p class="text-[11px] text-slate-400 mt-1">中英可寫在同一欄；前台會以此文字顯示在品牌專頁上方。</p>
+            </div>
+            <div class="sm:col-span-2"><label class="text-xs text-slate-500">品牌標語 (Tagline)</label>
+              <input id="fTagline" placeholder="例：Made in USA / Pack life with confidence." class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          </div>
+
+          <div class="mt-4">
+            <label class="text-xs text-slate-500 block mb-1">品牌 Logo (圖示)</label>
+            <div class="flex items-center gap-3">
+              <div class="w-20 h-20 rounded-lg bg-slate-100 grid place-items-center overflow-hidden">
+                <img id="fLogoPreview" class="w-full h-full object-contain hidden"/>
+                <span id="fLogoPh" class="text-2xl text-slate-300">🏷️</span>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <button type="button" onclick="pickLogo()" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded">媒體庫選擇</button>
+                <button type="button" onclick="clearLogo()" class="text-xs text-red-600">清除</button>
+              </div>
+            </div>
+            <input id="fLogo" type="hidden"/>
+            <p class="text-[11px] text-slate-400 mt-1">方形圖示，例如品牌 icon。</p>
+          </div>
+        </fieldset>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500">Slug (URL 用，留空自動產生)</label>
+            <input id="fSlug" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+          <div><label class="text-xs text-slate-500">排序</label>
+            <input id="fSort" type="number" value="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        </div>
+        <div><label class="text-xs text-slate-500">品牌介紹 (支援 HTML)</label>
+          <textarea id="fIntro" rows="4" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"></textarea></div>
+        <div><label class="flex items-center gap-2"><input id="fActive" type="checkbox" checked/> 啟用</label></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    let EDIT_ID = null;
+    const F = (id) => document.getElementById(id);
+
+    async function load() {
+      const { brands } = await fetch('/api/brands/admin').then(r=>r.json());
+      F('rows').innerHTML = (brands ?? []).map(b => `
+        <div class="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-5">
+          <div class="w-16 h-16 rounded-lg bg-slate-50 grid place-items-center overflow-hidden shrink-0">
+            ${b.logoUrl ? `<img src="${b.logoUrl}" class="w-full h-full object-contain"/>` : '<span class="text-2xl text-slate-300">🏷️</span>'}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <p class="font-bold">${b.nameZh}</p>
+              ${b.isActive ? '' : '<span class="text-xs text-slate-400">(停用)</span>'}
+            </div>
+            <p class="text-xs text-slate-400 font-mono">/${b.slug} · ${b.productCount} 項商品 · 排序 ${b.sortOrder}</p>
+          </div>
+          <div class="flex gap-3 shrink-0">
+            <a href="/brands/${b.slug}" target="_blank" class="text-xs text-slate-500 hover:text-teal-600">預覽 ↗</a>
+            <button onclick='openEdit(${JSON.stringify(b)})' class="text-xs text-teal-600">編輯</button>
+            <button onclick="del('${b.id}', ${b.productCount})" class="text-xs text-red-600">刪除</button>
+          </div>
+        </div>`).join('') || '<p class="text-center text-slate-500 py-12 bg-white rounded-2xl">尚無品牌，點「+ 新增品牌」開始。</p>';
+    }
+
+    function updateLogoPreview(url) {
+      const img = F('fLogoPreview'), ph = F('fLogoPh');
+      if (url) { img.src = url; img.classList.remove('hidden'); ph.classList.add('hidden'); }
+      else { img.classList.add('hidden'); ph.classList.remove('hidden'); }
+    }
+    window.pickLogo = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      F('fLogo').value = url; updateLogoPreview(url);
+    };
+    window.clearLogo = () => { F('fLogo').value = ''; updateLogoPreview(''); };
+
+    window.openNew = () => { EDIT_ID = null; fill({}); F('modalTitle').textContent = '新增品牌'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (b) => { EDIT_ID = b.id; fill(b); F('modalTitle').textContent = '編輯品牌'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    function fill(b) {
+      F('fNameZh').value = b.nameZh ?? '';
+      F('fTagline').value = b.tagline ?? '';
+      F('fSlug').value = b.slug ?? '';
+      F('fSort').value = b.sortOrder ?? 0;
+      F('fLogo').value = b.logoUrl ?? '';
+      F('fIntro').value = b.introHtml ?? '';
+      F('fActive').checked = b.isActive ?? true;
+      updateLogoPreview(b.logoUrl);
+    }
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        nameZh: F('fNameZh').value.trim(),
+        nameEn: null,                          // deprecated; merged into nameZh
+        tagline: F('fTagline').value.trim() || null,
+        slug:   F('fSlug').value.trim() || undefined,
+        logoUrl: F('fLogo').value || null,
+        wordmarkUrl: null,                     // deprecated; removed from front-end render
+        introHtml: F('fIntro').value || null,
+        sortOrder: parseInt(F('fSort').value, 10) || 0,
+        isActive: F('fActive').checked,
+      };
+      if (!body.nameZh) return alert('請輸入品牌名稱');
+      const url = EDIT_ID ? '/api/brands/admin/' + EDIT_ID : '/api/brands/admin';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) return alert('儲存失敗');
+      closeModal(); load();
+    });
+
+    window.del = async (id, productCount) => {
+      if (productCount > 0) return alert(`此品牌下有 ${productCount} 項商品，請先移除或改品牌。`);
+      if (!confirm('確定刪除？')) return;
+      const r = await fetch('/api/brands/admin/' + id, { method:'DELETE' });
+      if (!r.ok) return alert('刪除失敗');
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

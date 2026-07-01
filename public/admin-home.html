@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>首頁編輯 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <div>
+      <h1 class="text-2xl font-black">首頁編輯</h1>
+      <p class="text-sm text-slate-500 mt-1">編輯前台首頁 (index.html) 的主要文字與圖片。儲存後即時生效。</p>
+      <a href="/" target="_blank" class="text-xs text-teal-600 hover:underline mt-2 inline-block">在新分頁開啟首頁 ↗</a>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold mb-4">主視覺 (Hero) 與品牌</h2>
+      <div id="contentRows" class="space-y-3"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+        <div>
+          <h2 class="font-bold">首頁輪播橫幅</h2>
+          <p class="text-xs text-slate-500 mt-1">前台首頁上方的輪播 Banner。在「首頁橫幅」管理頁可新增 / 編輯。</p>
+        </div>
+        <a href="/admin-banners.html" class="text-sm bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">前往首頁橫幅 →</a>
+      </div>
+      <div id="bannerPreview" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+    </section>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    // Whitelist of content keys we surface on this curated landing-editor page.
+    // Anything else still lives in /admin-content.html.
+    // type → API `kind`. Order matters: HOME_KEYS drives both render and save.
+    // Hero / Callback sections were removed from this curated editor — they
+    // belong to /admin-pages.html's block editor (more flexible) or to
+    // /admin-content.html (raw content block CRUD).
+    const HOME_KEYS = [
+      // Site chrome
+      { key: 'site.logo.url',          label: '網站 Logo (前台)',     type: 'image',    kind: 'image' },
+      { key: 'admin.logo.url',         label: '後台 Logo (管理頁面)',  type: 'image',    kind: 'image' },
+      { key: 'nav.brand',              label: '品牌名稱 (Header)',    type: 'text',     kind: 'text'  },
+
+      // Hero 主視覺 — video wins over image when both are set
+      { key: 'landing.hero.bg.video',  label: '首頁主視覺 — 背景影片 URL (mp4/webm，優先於圖片)', type: 'image', kind: 'url'   },
+      { key: 'landing.hero.bg.image',  label: '首頁主視覺 — 背景圖片',                              type: 'image', kind: 'image' },
+      { key: 'landing.hero.eyebrow',   label: '首頁主視覺 — 小標籤 (eyebrow)',                       type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.title1',    label: '首頁主視覺 — 主標題第一行',                            type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.title2',    label: '首頁主視覺 — 主標題第二行 (斜體)',                     type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.subtitle',  label: '首頁主視覺 — 副標 (支援換行)',                        type: 'textarea', kind: 'text' },
+      { key: 'landing.hero.ctaPrimary',  label: '首頁主視覺 — 主按鈕文字',                            type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.ctaSecondary',label: '首頁主視覺 — 次按鈕文字',                            type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.trust1',    label: '首頁主視覺 — 信任徽章 1 (預設「通過 GMP 認證」)',       type: 'text',  kind: 'text'  },
+      { key: 'landing.hero.trust2',    label: '首頁主視覺 — 信任徽章 2 (預設「ECPay 安全金流」)',       type: 'text',  kind: 'text'  },
+
+      // 跑馬燈 (marquee bar) — toggle on/off + text
+      { key: 'landing.marquee.enabled', label: '首頁跑馬燈 — 啟用', type: 'toggle', kind: 'text' },
+      { key: 'landing.marquee.text',    label: '首頁跑馬燈 — 文字',               type: 'textarea', kind: 'text' },
+
+      // 熱銷 row + categories headings
+      { key: 'landing.hot.eyebrow',    label: '熱銷區 — 小標籤',                                    type: 'text',  kind: 'text'  },
+      { key: 'landing.hot.title',      label: '熱銷區 — 標題',                                      type: 'text',  kind: 'text'  },
+
+      // Footer
+      { key: 'footer.copyright',       label: 'Footer 著作權文字',   type: 'text',     kind: 'text'  },
+      { key: 'footer.note',            label: 'Footer 提示語',       type: 'text',     kind: 'text'  },
+    ];
+    const F = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+
+    async function load() {
+      // Bypass browser + CDN cache: admin always wants fresh values. Use the
+      // admin endpoint (no Cache-Control) and add a cache-buster as belt-and-braces.
+      const adminMap = await fetch('/api/content/admin?t=' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : { blocks: [] })
+        .then(d => Object.fromEntries((d.blocks ?? []).map(b => [b.key, b.valueZh])))
+        .catch(() => ({}));
+      const map = adminMap;
+      F('contentRows').innerHTML = HOME_KEYS.map((spec) => {
+        const v = map[spec.key] ?? '';
+        const id = 'k-' + spec.key.replace(/\./g,'-');
+        if (spec.type === 'image') {
+          return `<div class="border-b border-slate-100 pb-3">
+            <label class="text-xs text-slate-500 font-semibold block mb-1">${spec.label} <span class="font-mono text-slate-300">${spec.key}</span></label>
+            <div class="flex gap-2">
+              <input id="${id}" value="${esc(v)}" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"/>
+              <button type="button" data-pick="${id}" class="text-xs bg-slate-900 text-white px-3 rounded">媒體庫</button>
+            </div>
+            ${v ? `<img src="${esc(v)}" class="mt-2 max-h-24 rounded border border-slate-200"/>` : ''}
+          </div>`;
+        }
+        if (spec.type === 'textarea') {
+          return `<div class="border-b border-slate-100 pb-3">
+            <label class="text-xs text-slate-500 font-semibold block mb-1">${spec.label} <span class="font-mono text-slate-300">${spec.key}</span></label>
+            <textarea id="${id}" rows="3" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">${esc(v)}</textarea>
+          </div>`;
+        }
+        if (spec.type === 'toggle') {
+          const isOn = String(v).toLowerCase() === 'true';
+          return `<div class="border-b border-slate-100 pb-3 flex items-center justify-between gap-3">
+            <label class="text-xs text-slate-500 font-semibold block">${spec.label} <span class="font-mono text-slate-300">${spec.key}</span></label>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="${id}" type="checkbox" ${isOn ? 'checked' : ''} class="sr-only peer"/>
+              <span class="w-11 h-6 bg-slate-300 rounded-full peer-checked:bg-teal-600 transition relative
+                after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full
+                after:h-5 after:w-5 after:transition peer-checked:after:translate-x-5"></span>
+            </label>
+          </div>`;
+        }
+        return `<div class="border-b border-slate-100 pb-3">
+          <label class="text-xs text-slate-500 font-semibold block mb-1">${spec.label} <span class="font-mono text-slate-300">${spec.key}</span></label>
+          <input id="${id}" value="${esc(v)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"/>
+        </div>`;
+      }).join('') + `<div class="pt-3 text-right">
+        <button id="saveBtn" class="bg-teal-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-teal-700">儲存全部</button>
+      </div>`;
+
+      F('contentRows').querySelectorAll('[data-pick]').forEach((b) =>
+        b.addEventListener('click', async () => {
+          const url = await window.openMediaPicker();
+          if (url) document.getElementById(b.dataset.pick).value = url;
+        }));
+      F('saveBtn').addEventListener('click', save);
+
+      // Banner preview
+      const br = await fetch('/api/banners?placement=CAROUSEL').then(r=>r.json()).catch(()=>({banners:[]}));
+      F('bannerPreview').innerHTML = (br.banners ?? []).map(b => `
+        <div class="aspect-[16/9] bg-slate-200 rounded-lg overflow-hidden">
+          <img src="${esc(b.imageUrl)}" class="w-full h-full object-cover"/>
+        </div>`).join('') || '<p class="text-sm text-slate-400 col-span-full">尚未新增輪播橫幅。</p>';
+    }
+
+    async function save() {
+      const errs = [];
+      for (const spec of HOME_KEYS) {
+        const el = document.getElementById('k-' + spec.key.replace(/\./g,'-'));
+        const valueZh = spec.type === 'toggle' ? (el.checked ? 'true' : 'false') : el.value;
+        const body = {
+          key:     spec.key,
+          group:   spec.key.split('.')[0],   // 'hero' / 'site' / 'callback' / 'footer'
+          label:   spec.label,
+          valueZh,
+          kind:    spec.kind,
+        };
+        const r = await fetch('/api/content/admin', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const d = await r.json().catch(()=>({}));
+          errs.push(`${spec.label}: ${d.error ?? r.status}`);
+        }
+      }
+      if (errs.length) {
+        alert('部分項目儲存失敗：\n' + errs.join('\n'));
+      } else {
+        alert('已儲存。重新整理首頁即可看到變更。');
+      }
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

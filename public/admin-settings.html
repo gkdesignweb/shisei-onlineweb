@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>系統設定 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/>
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <div class="mb-8">
+      <h1 class="text-2xl font-black">系統設定</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        在此處填入第三方服務憑證；儲存後系統會立即套用（除 Database 欄位外，毋需重啟）。
+        欄位讀取優先順序：<span class="font-mono text-xs bg-slate-200 px-1.5 py-0.5 rounded">DB</span>
+        &gt; <span class="font-mono text-xs bg-slate-200 px-1.5 py-0.5 rounded">.env</span>
+        &gt; <span class="font-mono text-xs bg-slate-200 px-1.5 py-0.5 rounded">預設值</span>。
+      </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-slate-200 mb-8 overflow-x-auto" id="tabs"></div>
+
+    <div id="sections"></div>
+
+    <div id="saveBar" class="hidden sticky bottom-0 mt-8 -mx-6 px-6 py-4 bg-white/90 backdrop-blur border-t border-slate-200 flex justify-between items-center">
+      <span id="dirtyCount" class="text-sm text-slate-500"></span>
+      <div class="flex gap-2">
+        <button onclick="reset()" class="text-sm px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">復原</button>
+        <button onclick="save()" class="text-sm px-5 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700">儲存變更</button>
+      </div>
+    </div>
+
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white text-sm px-4 py-3 rounded-lg shadow-xl"></div>
+  </main>
+
+  <script>
+    const GROUP_LABELS = {
+      app:      { title: '應用程式',       desc: '網站對外公開的 URL，需為 HTTPS 才能讓 ECPay 觸發 callback。' },
+      ecpay:    { title: 'ECPay 金流',     desc: '從 ECPay 廠商後台 (vendor.ecpay.com.tw) 取得。切換「環境模式」會自動更新付款 URL。' },
+      invoice:  { title: 'ECPay 電子發票', desc: '電子發票模組的 MerchantID / HashKey 與金流模組不同，請分別填入。' },
+      line:     { title: 'LINE 整合',       desc: 'LINE Login (登入) 與 Messaging API (推播通知) 使用各自的 Channel。LINE Notify 已於 2025-03-31 停止服務。' },
+      google:   { title: 'Google 登入',      desc: 'Google OAuth 2.0。從 Google Cloud Console → APIs & Services → Credentials 取得 Client ID / Secret。Callback URL 需與後台一致。' },
+      smtp:     { title: '郵件 SMTP',       desc: '訂單通知 Email 寄送設定。留空則僅輸出至 console。' },
+      database: { title: '資料庫',          desc: '正式環境請使用 PostgreSQL。修改後需重啟服務並執行 prisma migrate deploy。' },
+    };
+
+    let DATA = null;       // server response
+    let DIRTY = {};        // key → new value
+    let CURRENT_TAB = null;
+    let HEALTH = {};       // group → { status, detail }
+
+    async function load() {
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user || me.user.role !== 'MANAGER') {
+        document.body.innerHTML = '<div class="grid place-items-center min-h-screen"><p class="text-slate-600">需要 MANAGER 權限。<a href="/login.html" class="text-teal-600 underline ml-1">登入</a></p></div>';
+        return;
+      }
+      DATA = await fetch('/api/settings').then(r=>r.json());
+      CURRENT_TAB = CURRENT_TAB ?? Object.keys(DATA.groups)[0];
+      renderTabs();
+      renderSection();
+      // Health probe — runs after first paint so the tabs don't block on it.
+      refreshHealth();
+    }
+
+    async function refreshHealth() {
+      try {
+        const r = await fetch('/api/settings/health', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        HEALTH = d.groups || {};
+        renderTabs();
+        renderSection();
+      } catch {}
+    }
+
+    // Color + tooltip per status. Returns an inline SVG dot.
+    const STATUS_STYLE = {
+      ok:      { color: '#10b981', label: '已連線',           pulse: false },
+      warn:    { color: '#f59e0b', label: '已設定（未驗證）', pulse: false },
+      missing: { color: '#94a3b8', label: '尚未設定',         pulse: false },
+      error:   { color: '#ef4444', label: '連線失敗',         pulse: true },
+      unknown: { color: '#cbd5e1', label: '檢測中…',          pulse: true },
+    };
+    function dot(status) {
+      const s = STATUS_STYLE[status] ?? STATUS_STYLE.unknown;
+      return `<span class="inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle${s.pulse ? ' animate-pulse' : ''}" style="background:${s.color}"></span>`;
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById('tabs');
+      tabs.innerHTML = Object.keys(DATA.groups).map(g => {
+        const h = HEALTH[g] ?? { status: 'unknown', detail: '檢測中…' };
+        const s = STATUS_STYLE[h.status] ?? STATUS_STYLE.unknown;
+        const title = `${s.label}${h.detail ? ' · ' + h.detail : ''}`;
+        return `
+          <button data-tab="${g}" onclick="switchTab('${g}')" title="${title.replace(/"/g, '&quot;')}"
+            class="px-5 py-3 text-sm font-semibold whitespace-nowrap border-b-2 ${g===CURRENT_TAB ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-900'}">
+            ${dot(h.status)}${GROUP_LABELS[g]?.title ?? g}
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.switchTab = (g) => { CURRENT_TAB = g; renderTabs(); renderSection(); };
+
+    function renderSection() {
+      const items = DATA.groups[CURRENT_TAB] ?? [];
+      const meta = GROUP_LABELS[CURRENT_TAB] ?? {};
+      const h = HEALTH[CURRENT_TAB] ?? { status: 'unknown', detail: '檢測中…' };
+      const s = STATUS_STYLE[h.status] ?? STATUS_STYLE.unknown;
+      document.getElementById('sections').innerHTML = `
+        <section class="bg-white rounded-2xl shadow-sm p-8">
+          <div class="flex items-start justify-between gap-3 mb-6 flex-wrap">
+            <div>
+              <h2 class="font-bold text-lg">${dot(h.status)}${meta.title ?? CURRENT_TAB}</h2>
+              <p class="text-sm text-slate-500 mt-1">${meta.desc ?? ''}</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="px-2 py-1 rounded-full" style="background:${s.color}20;color:${s.color}">${s.label}</span>
+              ${h.detail ? `<span class="text-slate-500">${h.detail}</span>` : ''}
+              <button onclick="refreshHealth()" class="text-slate-500 hover:text-teal-600">🔄 重新檢測</button>
+            </div>
+          </div>
+          <div class="space-y-5">
+            ${items.map(renderField).join('')}
+          </div>
+        </section>
+      `;
+      bindFieldEvents();
+    }
+
+    function renderField(it) {
+      const src = sourceBadge(it.source, it.requiresRestart);
+      const help = it.help ? `<p class="text-xs text-slate-500 mt-1">${it.help}</p>` : '';
+      let control = '';
+
+      if (it.type === 'select') {
+        control = `<select data-key="${it.key}" class="settings-input w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500">
+          ${it.options.map(o => `<option value="${o.value}" ${o.value===it.value?'selected':''}>${o.label}</option>`).join('')}
+        </select>`;
+      } else if (it.isSecret) {
+        control = `
+          <div class="flex gap-2">
+            <input data-key="${it.key}" data-secret="1" data-original-masked="${escapeAttr(it.value)}"
+                   type="password" value="${escapeAttr(it.value)}"
+                   class="settings-input flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:border-teal-500"/>
+            <button type="button" onclick="reveal('${it.key}')"
+                    class="text-xs px-3 rounded border border-slate-200 hover:bg-slate-50">👁 顯示</button>
+          </div>`;
+      } else {
+        const type = it.type === 'number' ? 'number' : 'text';
+        control = `<input data-key="${it.key}" type="${type}" value="${escapeAttr(it.value)}"
+                          class="settings-input w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-500"/>`;
+      }
+
+      return `
+        <div class="grid lg:grid-cols-[1fr,2fr] gap-4 items-start">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold text-sm">${it.label}</p>
+              ${src}
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-1">${it.key}</p>
+            ${help}
+          </div>
+          <div>${control}</div>
+        </div>`;
+    }
+
+    function sourceBadge(source, requiresRestart) {
+      const base = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded';
+      let badge = '';
+      if (source === 'db') badge = `<span class="${base} bg-teal-100 text-teal-700">DB</span>`;
+      else if (source === 'env') badge = `<span class="${base} bg-amber-100 text-amber-700">.env</span>`;
+      else badge = `<span class="${base} bg-slate-100 text-slate-600">預設</span>`;
+      if (requiresRestart) badge += ` <span class="${base} bg-red-100 text-red-700">需重啟</span>`;
+      return badge;
+    }
+
+    function bindFieldEvents() {
+      document.querySelectorAll('.settings-input').forEach(el => {
+        el.addEventListener('input', () => {
+          DIRTY[el.dataset.key] = el.value;
+          updateSaveBar();
+        });
+      });
+    }
+
+    function updateSaveBar() {
+      const n = Object.keys(DIRTY).length;
+      const bar = document.getElementById('saveBar');
+      const lbl = document.getElementById('dirtyCount');
+      bar.classList.toggle('hidden', n === 0);
+      lbl.textContent = n ? `有 ${n} 項變更未儲存` : '';
+    }
+
+    window.reveal = async (key) => {
+      const r = await fetch('/api/settings/reveal', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ key }),
+      });
+      if (!r.ok) return toast('讀取失敗', 'error');
+      const { value } = await r.json();
+      const input = document.querySelector(`[data-key="${key}"]`);
+      input.type = 'text';
+      input.value = value;
+      DIRTY[key] = value;     // user can edit immediately; mark editable
+      updateSaveBar();
+    };
+
+    window.reset = () => {
+      DIRTY = {};
+      load();
+    };
+
+    window.save = async () => {
+      if (Object.keys(DIRTY).length === 0) return;
+      const r = await fetch('/api/settings', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ settings: DIRTY }),
+      });
+      if (!r.ok) return toast('儲存失敗', 'error');
+      const { written } = await r.json();
+      DIRTY = {};
+      toast(`已儲存 ${written.length} 項設定，已立即套用至所有後端服務`);
+      load();
+    };
+
+    function toast(msg, kind = 'ok') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'fixed bottom-6 right-6 text-sm px-4 py-3 rounded-lg shadow-xl ' +
+        (kind === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+      setTimeout(() => t.className = 'hidden', 2500);
+    }
+
+    function escapeAttr(s) { return String(s ?? '').replace(/"/g, '&quot;'); }
+
+    load();
+  </script>
+  <script src="/js/admin-nav.js"></script>
+</body>
+</html>

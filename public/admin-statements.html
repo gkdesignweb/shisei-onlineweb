@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>月結對帳單 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="mb-6">
+      <h1 class="text-2xl font-black">月結對帳單</h1>
+      <p class="text-sm text-slate-500 mt-1">選擇客戶與月份即可預覽當月所有付款訂單；可列印或另存為 PDF。</p>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+      <div class="grid sm:grid-cols-4 gap-3 items-end">
+        <div>
+          <label class="text-xs text-slate-500 font-semibold">年份</label>
+          <select id="yearSel" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm"></select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 font-semibold">月份</label>
+          <select id="monthSel" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm"></select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 font-semibold">客戶 (限當月有月結訂單)</label>
+          <select id="customerSel" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm">
+            <option value="">— 先選年月 —</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="previewBtn" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 flex-1">預覽</button>
+          <a id="printBtn" target="_blank" class="hidden bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 grid place-items-center">列印 / PDF</a>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-3">下拉只列出該月份有「月結對帳單」付款方式且狀態為 PAID/SHIPPED/COMPLETED 的客戶。</p>
+    </section>
+
+    <section id="result" class="hidden bg-white rounded-2xl shadow-sm p-6"></section>
+    <p id="emptyMsg" class="hidden text-center text-slate-500 py-12">此月份沒有付款訂單。</p>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script>
+    const F = (id) => document.getElementById(id);
+    const fmt = (n) => 'NT$ ' + (n ?? 0).toLocaleString();
+    const dt  = (s) => new Date(s).toLocaleString('zh-TW');
+
+    // Populate year/month dropdowns. Default to current year/month.
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    F('yearSel').innerHTML  = [thisYear-2, thisYear-1, thisYear, thisYear+1]
+      .map((y) => `<option value="${y}" ${y===thisYear?'selected':''}>${y} 年</option>`).join('');
+    F('monthSel').innerHTML = Array.from({length:12}, (_, i) => i + 1)
+      .map((m) => `<option value="${String(m).padStart(2,'0')}" ${m===now.getMonth()+1?'selected':''}>${m} 月</option>`).join('');
+
+    function currentYm() { return `${F('yearSel').value}-${F('monthSel').value}`; }
+
+    async function loadCustomers() {
+      const month = currentYm();
+      F('customerSel').innerHTML = '<option value="">載入中…</option>';
+      try {
+        const r = await fetch('/api/admin/statements/customers?month=' + month, { cache:'no-store' });
+        const { customers } = await r.json();
+        const opts = (customers || [])
+          .map((c) => `<option value="${c.id}">${(c.clinicName || c.name)} · ${c.email}</option>`).join('');
+        F('customerSel').innerHTML = customers.length
+          ? ('<option value="">— 選擇客戶 —</option>' + opts)
+          : '<option value="">此月份沒有月結訂單客戶</option>';
+      } catch {
+        F('customerSel').innerHTML = '<option value="">讀取失敗</option>';
+      }
+    }
+    F('yearSel').addEventListener('change', loadCustomers);
+    F('monthSel').addEventListener('change', loadCustomers);
+
+    F('previewBtn').addEventListener('click', preview);
+    async function preview() {
+      const userId = F('customerSel').value;
+      const month  = currentYm();
+      if (!userId) return alert('請選擇客戶');
+      const r = await fetch(`/api/admin/statements/preview?userId=${userId}&month=${month}`);
+      if (!r.ok) return alert('讀取失敗');
+      const d = await r.json();
+      F('printBtn').href = `/api/admin/statements/print?userId=${userId}&month=${month}`;
+      F('printBtn').classList.remove('hidden');
+      if (d.orders.length === 0) {
+        F('result').classList.add('hidden');
+        F('emptyMsg').classList.remove('hidden');
+        return;
+      }
+      F('emptyMsg').classList.add('hidden');
+      F('result').classList.remove('hidden');
+      F('result').innerHTML = render(d);
+    }
+
+    function render(d) {
+      const u = d.user;
+      return `
+        <div class="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h2 class="text-xl font-bold">${u.clinicName || u.name}</h2>
+            <p class="text-sm text-slate-500">${u.email} · ${u.phone || '-'} · 統編 ${u.taxId || '-'}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-500">${d.month} 共 ${d.summary.orderCount} 筆 / 月結 ${d.summary.monthlyBilledCount} 筆</p>
+            <p class="text-3xl font-black text-teal-700">${fmt(d.summary.totalAmount)}</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          ${d.orders.map((o) => `
+            <details class="bg-slate-50 rounded-xl border border-slate-200">
+              <summary class="cursor-pointer px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+                <span class="text-sm">
+                  <span class="font-mono">${o.merchantTradeNo}</span> · ${dt(o.createdAt)}
+                  <span class="ml-2 text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">${o.paymentMethod}</span>
+                  <span class="ml-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">${o.status}</span>
+                </span>
+                <span class="font-bold">${fmt(o.total)}</span>
+              </summary>
+              <div class="px-4 pb-4 pt-1 text-sm">
+                <table class="w-full">
+                  <thead><tr class="text-xs text-slate-500 border-b border-slate-200">
+                    <th class="py-2 text-left">商品</th><th class="text-right">單價</th><th class="text-right">數量</th><th class="text-right">小計</th></tr></thead>
+                  <tbody>${o.items.map((i) => `
+                    <tr class="border-b border-slate-100">
+                      <td class="py-2">${i.nameZh}${i.variantName ? ` <span class="text-xs text-slate-400">(${i.variantName})</span>` : ''}<br><span class="text-xs text-slate-400 font-mono">${i.sku}</span></td>
+                      <td class="text-right">${fmt(i.unitPrice)}</td>
+                      <td class="text-right">${i.quantity}</td>
+                      <td class="text-right font-semibold">${fmt(i.lineTotal)}</td>
+                    </tr>`).join('')}
+                    ${o.voucherDiscount > 0 ? `<tr><td colspan="3" class="text-right text-emerald-700 pt-2">優惠折抵 ${o.voucherCode || ''}</td><td class="text-right text-emerald-700 pt-2">- ${fmt(o.voucherDiscount)}</td></tr>` : ''}
+                    ${o.shippingFee > 0 ? `<tr><td colspan="3" class="text-right text-slate-500">運費</td><td class="text-right">${fmt(o.shippingFee)}</td></tr>` : ''}
+                  </tbody>
+                </table>
+              </div>
+            </details>`).join('')}
+        </div>`;
+    }
+
+    loadCustomers();
+  </script>
+</body>
+</html>

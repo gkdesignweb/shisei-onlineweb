@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>資生國際|會員中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+  <script>
+    // Auth pre-check — runs BEFORE the body renders so anon users never see
+    // a flash of member sections. Fires a synchronous(-ish) redirect if not
+    // logged in; also gives us a "gone home" fallback if the fetch hangs.
+    (async () => {
+      const guardMs = 4000; // if /api/auth/me takes >4s, show a manual login link
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return;
+        document.getElementById('acctFallback')?.classList.remove('hidden');
+      }, guardMs);
+      try {
+        const r = await fetch('/api/auth/me', { cache: 'no-store' });
+        const d = await r.json();
+        done = true;
+        clearTimeout(timer);
+        if (!d.user) {
+          location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+        }
+      } catch {
+        done = true;
+        clearTimeout(timer);
+        document.getElementById('acctFallback')?.classList.remove('hidden');
+      }
+    })();
+  </script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-700">
+          <a href="/"               class="hover:text-teal-600">回首頁</a>
+          <a href="/shop.html"      class="hover:text-teal-600">所有產品</a>
+          <a href="/promotion.html" class="hover:text-teal-600">檔期優惠專區</a>
+          <a href="/brands"         class="hover:text-teal-600">品牌館</a>
+          <a href="/account.html"   class="hover:text-teal-600">會員中心</a>
+        </nav>
+        <button data-mini-cart data-auth-user style="display:none" class="relative bg-teal-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-full hover:bg-teal-700 inline-flex items-center gap-1">
+          🛒 <span id="cartCount" class="font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Shown only if /api/auth/me hangs or the redirect fails — user always has a clear next step -->
+  <section id="acctFallback" class="hidden max-w-md mx-auto px-6 py-16 text-center">
+    <svg class="w-12 h-12 mx-auto text-slate-400 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path stroke-linecap="round" d="M4 21c0-4.42 3.58-8 8-8s8 3.58 8 8"/></svg>
+    <h2 class="text-lg font-bold text-slate-900 mb-1">請先登入會員中心</h2>
+    <p class="text-sm text-slate-500 mb-6">您需要登入後才能查看訂單、會員資訊與收藏清單。</p>
+    <a href="/login.html?next=/account.html" class="inline-flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm px-6 py-3 rounded-full">前往登入</a>
+    <p class="mt-4 text-xs text-slate-400">還沒有帳號？<a href="/register.html" class="text-teal-600 hover:underline">立即註冊</a></p>
+  </section>
+
+  <main id="acctMain" class="max-w-6xl mx-auto px-6 py-10 space-y-8" style="visibility:hidden">
+    <div id="paidBanner"   class="hidden p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800"></div>
+    <div id="actionBanner" class="hidden p-4 bg-teal-50    border border-teal-200    rounded-xl text-sm text-teal-800"></div>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h1 class="text-2xl font-black">會員資訊</h1>
+        <button onclick="openProfile()" class="text-sm bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">編輯資料</button>
+      </div>
+      <div id="profile" class="grid sm:grid-cols-3 gap-4 text-sm"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="text-lg font-bold mb-4">帳號安全</h2>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <button onclick="openPassword()" class="border border-slate-200 rounded-xl p-4 text-left hover:border-teal-500">
+          <p class="font-semibold text-sm">🔒 變更密碼</p>
+          <p class="text-xs text-slate-500 mt-1">需驗證目前密碼</p>
+        </button>
+        <button onclick="openEmail()" class="border border-slate-200 rounded-xl p-4 text-left hover:border-teal-500">
+          <p class="font-semibold text-sm">✉️ 變更 Email</p>
+          <p class="text-xs text-slate-500 mt-1" id="emailHint">驗證信會寄至新 Email</p>
+        </button>
+        <div class="border border-slate-200 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-1">
+            <p class="font-semibold text-sm flex items-center gap-1.5">
+              <svg width="18" height="18" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" class="rounded p-0.5 bg-[#06C755]">
+                <path fill="#fff" d="M29.7 16.18c0-5.23-5.24-9.48-11.7-9.48S6.3 10.95 6.3 16.18c0 4.69 4.16 8.62 9.78 9.36.38.08.9.25 1.03.58.12.3.08.76.04 1.07l-.17 1c-.05.3-.23 1.16 1.02.63 1.25-.52 6.74-3.97 9.2-6.8 1.7-1.86 2.5-3.76 2.5-5.84zM12.34 19.5h-2.33c-.34 0-.61-.27-.61-.61v-4.66c0-.34.27-.61.61-.61.34 0 .61.27.61.61v4.05h1.72c.34 0 .61.27.61.61s-.27.61-.61.61zm2.39-.61c0 .34-.27.61-.61.61-.34 0-.61-.27-.61-.61v-4.66c0-.34.27-.61.61-.61.34 0 .61.27.61.61v4.66zm5.6 0c0 .26-.17.5-.42.58-.07.02-.13.03-.2.03-.19 0-.37-.09-.49-.24l-2.39-3.25v2.88c0 .34-.27.61-.61.61-.34 0-.61-.27-.61-.61v-4.66c0-.26.17-.5.42-.58.07-.02.13-.03.2-.03.19 0 .37.09.49.24l2.39 3.25v-2.88c0-.34.27-.61.61-.61.34 0 .61.27.61.61v4.66zm3.76-2.94c.34 0 .61.27.61.61s-.27.61-.61.61h-1.72v1.11h1.72c.34 0 .61.27.61.61s-.27.61-.61.61h-2.33c-.34 0-.61-.27-.61-.61v-4.66c0-.34.27-.61.61-.61h2.33c.34 0 .61.27.61.61s-.27.61-.61.61h-1.72v1.11h1.72z"/>
+              </svg>
+              LINE 連結
+            </p>
+            <span id="lineBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-500"></span>
+          </div>
+          <button id="lineLinkBtn" class="text-xs text-teal-700 underline mt-2">連結 LINE 帳號</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tierProgressSection" class="hidden bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex justify-between items-end mb-4 flex-wrap gap-2">
+        <h2 class="text-lg font-bold">會員等級進度</h2>
+        <a href="/p/member-tiers" class="text-xs text-teal-600 hover:underline">查看會員制度 →</a>
+      </div>
+      <div id="tierProgress"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">我的訂單</h2>
+        <a href="/account-orders.html" class="text-sm text-teal-600 hover:underline font-semibold">查看全部 / 下載發票 →</a>
+      </div>
+      <div id="orders" class="space-y-3"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold">我的優惠券</h2>
+        <span id="voucherCount" class="text-xs text-slate-400"></span>
+      </div>
+      <div id="vouchers" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="text-lg font-bold mb-4">我的收藏</h2>
+      <div id="wishlist" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+    </section>
+  </main>
+
+  <!-- 編輯資料 modal -->
+  <div id="profileModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-xl">
+      <h3 class="font-bold text-lg mb-4">編輯會員資料</h3>
+      <div class="grid sm:grid-cols-2 gap-3 text-sm">
+        <div><label class="text-xs text-slate-500">姓名 *</label>
+          <input id="pName" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">聯絡電話</label>
+          <input id="pPhone" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">診所 / 機構名稱</label>
+          <input id="pClinic" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">診所地址</label>
+          <input id="pAddress" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">統一編號 (8 碼)</label>
+          <input id="pTaxId" pattern="\d{8}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">發票抬頭</label>
+          <input id="pTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModals()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="saveProfile()" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 變更密碼 modal -->
+  <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 class="font-bold text-lg mb-4">變更密碼</h3>
+      <div class="space-y-3 text-sm">
+        <div><label class="text-xs text-slate-500">目前密碼 *</label>
+          <input id="pwCurrent" type="password" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">新密碼 (至少 8 字元) *</label>
+          <input id="pwNew" type="password" minlength="8" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">再次輸入新密碼 *</label>
+          <input id="pwNew2" type="password" minlength="8" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <p id="pwErr" class="text-xs text-red-600 hidden"></p>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModals()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="savePassword()" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">變更</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 變更 Email modal -->
+  <div id="emailModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 class="font-bold text-lg mb-1">變更 Email</h3>
+      <p class="text-xs text-slate-500 mb-4">驗證連結會寄至「新 Email」，點擊後完成變更。</p>
+      <div class="space-y-3 text-sm">
+        <div><label class="text-xs text-slate-500">新 Email *</label>
+          <input id="emNew" type="email" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div id="emPwWrap"><label class="text-xs text-slate-500">目前密碼 *</label>
+          <input id="emPw" type="password" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <p id="emErr" class="text-xs text-red-600 hidden"></p>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModals()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="requestEmail()" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">寄送驗證信</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ME = null;
+    const $ = (id) => document.getElementById(id);
+
+    function showActionBanner(text, kind) {
+      const el = $('actionBanner');
+      el.textContent = text;
+      el.className = 'p-4 border rounded-xl text-sm ' + (kind === 'error'
+        ? 'bg-rose-50 border-rose-200 text-rose-800'
+        : 'bg-teal-50 border-teal-200 text-teal-800');
+    }
+
+    async function load() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('paid')) {
+        const b = document.getElementById('paidBanner');
+        b.classList.remove('hidden');
+        b.textContent = `付款流程已完成 (訂單 ${params.get('trade') ?? ''})，訂單狀態將由系統自動更新。`;
+      }
+      if (params.get('emailUpdated')) showActionBanner('✓ Email 已更新成功');
+      if (params.get('lineOk'))       showActionBanner('✓ LINE 帳號已連結');
+      if (params.get('lineErr') === 'already_linked')
+        showActionBanner('此 LINE 帳號已連結到其他會員，請改用別的 LINE。', 'error');
+
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user) {
+        // Use replace() so back-button doesn't loop, and pass ?next so the user
+        // returns to 會員中心 after logging in.
+        location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+        return;
+      }
+      ME = me.user;
+      document.getElementById('acctMain').style.visibility = ''; // reveal once auth confirmed
+      const u = me.user;
+
+      // LINE link badge + button
+      const badge = $('lineBadge'), btn = $('lineLinkBtn');
+      if (u.lineLinked) {
+        badge.textContent = '已連結';
+        badge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-700';
+        btn.textContent = '解除連結';
+        btn.onclick = unlinkLine;
+      } else {
+        badge.textContent = '未連結';
+        badge.className = 'text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-500';
+        btn.textContent = '連結 LINE 帳號';
+        btn.onclick = () => { location.href = '/api/auth/line/start?link=1'; };
+      }
+
+      // Pending email indicator
+      if (u.pendingEmail) {
+        $('emailHint').textContent = `待驗證：${u.pendingEmail}`;
+        $('emailHint').className = 'text-xs text-amber-700 mt-1';
+      }
+      const statusZh = ({PENDING:'審核中', APPROVED:'已通過', REJECTED:'未通過'})[u.verificationStatus];
+      document.getElementById('profile').innerHTML = `
+        <div><p class="text-xs text-slate-500">姓名</p><p class="font-semibold">${u.name}</p></div>
+        <div><p class="text-xs text-slate-500">電子郵件</p><p class="font-semibold">${u.email}</p></div>
+        <div><p class="text-xs text-slate-500">角色</p><p class="font-semibold">${u.role}</p></div>
+        <div><p class="text-xs text-slate-500">會員等級</p>
+          <p><span class="tier-pill ${u.tier==='GOLD'?'tier-gold':'tier-bronze'}">${u.tier}</span></p></div>
+        <div><p class="text-xs text-slate-500">身份審核</p><p class="font-semibold">${statusZh}</p></div>
+        <div><p class="text-xs text-slate-500">統一編號 / 抬頭</p><p class="font-semibold">${u.taxId ?? '—'} / ${u.companyTitle ?? '—'}</p></div>
+      `;
+
+      if (u.verificationStatus === 'APPROVED') {
+        try {
+          const tp = await fetch('/api/auth/me/tier-progress').then(r=>r.json());
+          renderTierProgress(tp);
+        } catch {}
+        // Vouchers — tier-aware list of usable codes.
+        try {
+          const { vouchers } = await fetch('/api/vouchers/mine').then(r=>r.json());
+          const vc = document.getElementById('vouchers');
+          const cnt = document.getElementById('voucherCount');
+          cnt.textContent = (vouchers?.length ?? 0) === 0 ? '暫無可用優惠券' : `共 ${vouchers.length} 張可用`;
+          if (!vouchers || vouchers.length === 0) {
+            vc.innerHTML = '<p class="col-span-full text-slate-500 text-sm">目前沒有可使用的優惠券。</p>';
+          } else {
+            vc.innerHTML = vouchers.map((v) => {
+              const valueLabel = v.type === 'PERCENT' ? `${v.value}% OFF` : `折抵 NT$ ${v.value.toLocaleString()}`;
+              const until = v.validUntil ? new Date(v.validUntil).toLocaleDateString('zh-TW') : null;
+              const minLine = v.minOrderAmount > 0 ? `滿 NT$ ${v.minOrderAmount.toLocaleString()} 可用` : '無門檻';
+              return `<div class="border border-dashed border-teal-300 rounded-xl p-4 bg-teal-50/40 relative">
+                <p class="text-xl font-black text-teal-700">${valueLabel}</p>
+                <p class="font-mono text-xs text-slate-500 mt-1">${v.code}</p>
+                ${v.description ? `<p class="text-sm text-slate-700 mt-1">${v.description}</p>` : ''}
+                <p class="text-xs text-slate-500 mt-2">${minLine}${until ? ` · 至 ${until}` : ''}</p>
+                <button onclick="navigator.clipboard.writeText('${v.code}'); this.textContent='✓ 已複製';" class="mt-3 w-full text-xs bg-teal-600 text-white py-1.5 rounded">複製代碼</button>
+              </div>`;
+            }).join('');
+          }
+        } catch {}
+
+        // Wishlist
+        try {
+          const { items } = await fetch('/api/wishlist').then(r=>r.json());
+          const wl = document.getElementById('wishlist');
+          if (items.length === 0) {
+            wl.innerHTML = `<div class="col-span-full empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+              <p class="text-sm">尚未收藏任何商品</p>
+              <a href="/shop.html" class="inline-block mt-3 text-sm font-semibold text-teal-600 hover:underline">去逛逛 →</a>
+            </div>`;
+          } else {
+            wl.innerHTML = items.map(it => `
+              <a href="/products/${encodeURIComponent(it.product.id)}" class="bg-slate-50 rounded-xl overflow-hidden hover:shadow-md transition">
+                <div class="aspect-square bg-white grid place-items-center overflow-hidden">
+                  ${it.product.imageUrl ? `<img loading="lazy" src="${it.product.imageUrl}" class="w-full h-full object-cover"/>` : '<span class="text-4xl">📦</span>'}
+                </div>
+                <div class="p-2">
+                  <p class="text-xs text-slate-500">${it.product.brand?.nameZh ?? ''}</p>
+                  <p class="text-sm font-semibold truncate">${it.product.nameZh}</p>
+                </div>
+              </a>`).join('');
+          }
+        } catch {}
+
+        const { orders } = await fetch('/api/orders/mine').then(r=>r.json());
+        const cont = document.getElementById('orders');
+        if (orders.length === 0) {
+          cont.innerHTML = '<p class="text-slate-500 text-sm">尚無訂單。</p>';
+        } else {
+          cont.innerHTML = orders.map(o => `
+            <div class="border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p class="text-xs text-slate-400">${o.merchantTradeNo} · ${new Date(o.createdAt).toLocaleString('zh-TW')}</p>
+                <p class="font-semibold">${o.items.length} 項商品 · NT$ ${o.total.toLocaleString()}</p>
+                ${o.atmVAccount ? `<p class="text-xs text-amber-700 mt-1">ATM 繳款帳號：${o.atmBankCode}-${o.atmVAccount}</p>`:''}
+                ${o.cvsPaymentNo ? `<p class="text-xs text-amber-700 mt-1">超商繳款代碼：${o.cvsPaymentNo}</p>`:''}
+                ${o.invoiceNumber ? `<p class="text-xs text-emerald-700 mt-1">電子發票：${o.invoiceNumber}</p>`:''}
+              </div>
+              <span class="text-xs font-bold px-3 py-1 rounded-full ${statusClass(o.status)}">${statusText(o.status)}</span>
+            </div>
+          `).join('');
+        }
+      } else {
+        document.getElementById('orders').innerHTML =
+          '<p class="text-slate-500 text-sm">會員身份審核通過後即可下單。</p>';
+      }
+    }
+
+    function statusText(s) {
+      return ({
+        PENDING_PAYMENT:'待付款', PAID:'已付款', PROCESSING:'處理中',
+        SHIPPED:'已出貨', DELIVERED:'已送達', CANCELLED:'已取消', REFUNDED:'已退款'
+      })[s] ?? s;
+    }
+    function statusClass(s) {
+      if (s === 'PAID' || s === 'SHIPPED' || s === 'DELIVERED') return 'bg-emerald-100 text-emerald-700';
+      if (s === 'PENDING_PAYMENT') return 'bg-amber-100 text-amber-700';
+      return 'bg-slate-100 text-slate-600';
+    }
+    document.getElementById('logout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method:'POST' });
+      location.href = '/';
+    });
+
+    window.closeModals = () => {
+      ['profileModal','passwordModal','emailModal'].forEach(id => $(id).classList.add('hidden'));
+      ['pwErr','emErr'].forEach(id => $(id).classList.add('hidden'));
+    };
+
+    window.openProfile = () => {
+      $('pName').value    = ME.name ?? '';
+      $('pPhone').value   = ME.phone ?? '';
+      $('pClinic').value  = ME.clinicName ?? '';
+      $('pAddress').value = ME.clinicAddress ?? '';
+      $('pTaxId').value   = ME.taxId ?? '';
+      $('pTitle').value   = ME.companyTitle ?? '';
+      $('profileModal').classList.remove('hidden');
+    };
+    window.saveProfile = async () => {
+      const body = {
+        name:          $('pName').value.trim(),
+        phone:         $('pPhone').value.trim(),
+        clinicName:    $('pClinic').value.trim(),
+        clinicAddress: $('pAddress').value.trim(),
+        taxId:         $('pTaxId').value.trim(),
+        companyTitle:  $('pTitle').value.trim(),
+      };
+      if (!body.name) return alert('請輸入姓名');
+      const r = await fetch('/api/auth/me/profile', {
+        method: 'PUT', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) return alert('儲存失敗');
+      closeModals();
+      showActionBanner('✓ 會員資料已更新');
+      load();
+    };
+
+    window.openPassword = () => {
+      $('pwCurrent').value = ''; $('pwNew').value = ''; $('pwNew2').value = '';
+      $('passwordModal').classList.remove('hidden');
+    };
+    window.savePassword = async () => {
+      const cur = $('pwCurrent').value;
+      const a = $('pwNew').value, b = $('pwNew2').value;
+      const err = $('pwErr'); err.classList.add('hidden');
+      if (a.length < 8) { err.textContent = '新密碼至少 8 字元'; err.classList.remove('hidden'); return; }
+      if (a !== b)      { err.textContent = '兩次新密碼不一致'; err.classList.remove('hidden'); return; }
+      const r = await fetch('/api/auth/me/password', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ currentPassword: cur, newPassword: a }),
+      });
+      if (!r.ok) {
+        const d = await r.json();
+        err.textContent = d.error === 'current_password_wrong' ? '目前密碼不正確' : '變更失敗';
+        err.classList.remove('hidden'); return;
+      }
+      closeModals();
+      showActionBanner('✓ 密碼已變更');
+    };
+
+    window.openEmail = () => {
+      $('emNew').value = ''; $('emPw').value = '';
+      $('emPwWrap').style.display = ME?.lineLinked && !ME?.email?.includes('@') ? 'none' : '';
+      $('emailModal').classList.remove('hidden');
+    };
+    window.requestEmail = async () => {
+      const newEmail = $('emNew').value.trim();
+      const err = $('emErr'); err.classList.add('hidden');
+      if (!newEmail) { err.textContent = '請輸入新 Email'; err.classList.remove('hidden'); return; }
+      const r = await fetch('/api/auth/me/email/request', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ newEmail, currentPassword: $('emPw').value }),
+      });
+      if (!r.ok) {
+        const d = await r.json();
+        err.textContent = d.error === 'current_password_wrong' ? '目前密碼不正確'
+                        : d.error === 'email_in_use' ? '此 Email 已被其他帳號使用'
+                        : '送出失敗';
+        err.classList.remove('hidden'); return;
+      }
+      closeModals();
+      showActionBanner(`✓ 驗證信已寄至 ${newEmail}，請至信箱點擊連結完成變更`);
+      load();
+    };
+
+    function renderTierProgress(tp) {
+      if (!tp.currentTier) return;
+      $('tierProgressSection').classList.remove('hidden');
+      const spend = tp.yearlySpend || 0;
+      const upgrade = tp.nextTier?.threshold;
+      const retain  = tp.retain?.threshold;
+      const pctUp = upgrade ? Math.min(100, Math.round(spend / upgrade * 100)) : null;
+      const pctRetain = retain ? Math.min(100, Math.round(spend / retain * 100)) : null;
+      $('tierProgress').innerHTML = `
+        <p class="text-sm text-slate-600">${tp.year} 年度累計消費：<b class="text-teal-700">NT$ ${spend.toLocaleString()}</b></p>
+        ${tp.nextTier && upgrade ? `
+          <div class="mt-4">
+            <div class="flex justify-between text-xs mb-1">
+              <span>升級至 <b>${tp.nextTier.nameZh}</b></span>
+              <span>${spend.toLocaleString()} / ${upgrade.toLocaleString()}</span>
+            </div>
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-teal-500 to-emerald-500" style="width:${pctUp}%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">${tp.nextTier.remaining > 0 ? `再消費 NT$ ${tp.nextTier.remaining.toLocaleString()} 即可升等。` : '已達升級門檻 🎉'}</p>
+          </div>` : '<p class="text-xs text-slate-500 mt-2">已為最高等級。</p>'}
+        ${tp.retain ? `
+          <div class="mt-4">
+            <div class="flex justify-between text-xs mb-1">
+              <span>明年維持 <b>${tp.currentTier.nameZh}</b> 等級</span>
+              <span>${spend.toLocaleString()} / ${retain.toLocaleString()}</span>
+            </div>
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full ${tp.retain.onTrack ? 'bg-emerald-500' : 'bg-amber-400'}" style="width:${pctRetain}%"></div>
+            </div>
+            <p class="text-xs ${tp.retain.onTrack ? 'text-emerald-700' : 'text-amber-700'} mt-1">${tp.retain.onTrack ? '✓ 已達維持門檻，明年將保留現有等級。' : `再消費 NT$ ${tp.retain.remaining.toLocaleString()} 即可維持等級。`}</p>
+          </div>` : ''}`;
+    }
+
+    async function unlinkLine() {
+      if (!confirm('解除 LINE 帳號連結？')) return;
+      const r = await fetch('/api/auth/me/line/unlink', { method:'POST' });
+      if (!r.ok) return alert('解除失敗');
+      showActionBanner('✓ 已解除 LINE 連結');
+      load();
+    }
+
+    load();
+  </script>
+  <div id="siteFooter"></div>
+  <script src="/js/cart-mini.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    (async () => {
+      try {
+        const { items } = await fetch('/api/cart').then(r=>r.json());
+        document.getElementById('cartCount').textContent = items.reduce((s,i)=>s+i.quantity,0);
+      } catch {}
+    })();
+  </script>
+</body>
+</html>

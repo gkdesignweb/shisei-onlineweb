@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>商品管理 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="/css/prose.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0"><img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/><span class="font-bold tracking-wide">管理後台</span></a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">商品管理</h1>
+        <p class="text-sm text-slate-500 mt-1">新增、編輯商品；Price A 為標準價、Price B 為優惠價，會依會員等級套用。</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/api/admin/catalog/products/export.csv"
+           class="text-sm font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50">📤 匯出 CSV</a>
+        <button onclick="openImport()" class="text-sm font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50">📥 匯入 CSV</button>
+        <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增商品</button>
+      </div>
+    </div>
+
+    <!-- 匯入 modal -->
+    <div id="importModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+      <div class="bg-white rounded-2xl p-6 w-full max-w-xl">
+        <h3 class="font-bold text-lg mb-2">匯入商品 CSV</h3>
+        <p class="text-xs text-slate-500 mb-4">
+          以 SKU 為主鍵：已存在則更新、不存在則新增。<br/>
+          必要欄位：<code>sku</code>、<code>nameZh</code>、<code>categorySlug</code>、<code>priceA</code>。<br/>
+          <code>categorySlug</code> / <code>brandSlug</code> 必須對應已建立的分類 / 品牌。<br/>
+          建議先「匯出 CSV」當作範本再修改。
+        </p>
+        <input id="importFile" type="file" accept=".csv,text/csv"
+               class="w-full text-sm border border-slate-200 rounded-lg p-2"/>
+        <div id="importResult" class="mt-3 text-sm"></div>
+        <div class="flex justify-end gap-2 mt-5">
+          <button onclick="closeImport()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+          <button id="importGoBtn" onclick="runImport()" class="px-4 py-1.5 text-sm rounded bg-teal-600 text-white hover:bg-teal-700">開始匯入</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">圖片</th>
+            <th class="px-4 py-3 text-left">SKU</th>
+            <th class="px-4 py-3 text-left">名稱</th>
+            <th class="px-4 py-3 text-left">分類</th>
+            <th class="px-4 py-3 text-right">Price A</th>
+            <th class="px-4 py-3 text-right">Price B</th>
+            <th class="px-4 py-3 text-right">庫存</th>
+            <th class="px-4 py-3 text-center">狀態</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
+      <div class="p-6 pb-2 border-b border-slate-100">
+        <h3 id="modalTitle" class="font-bold text-lg">新增商品</h3>
+        <div id="tabs" class="flex gap-1 mt-4 -mb-px overflow-x-auto">
+          <button data-tab="basic"    class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-teal-600 text-teal-700">基本</button>
+          <button data-tab="images"   class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-900">圖片</button>
+          <button data-tab="prices"   class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-900">價格 / 庫存</button>
+          <button data-tab="variants" class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-900">規格選項</button>
+          <button data-tab="content"  class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-900">介紹 / 影片</button>
+          <button data-tab="advanced" class="tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-900">標籤 / 進階</button>
+        </div>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 text-sm">
+        <!-- ============== 基本 ============== -->
+        <div data-pane="basic" class="grid sm:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-500">SKU *</label>
+            <input id="fSku" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+          <div><label class="text-xs text-slate-500">分類 *</label>
+            <select id="fCat" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"></select>
+            <div id="fCatNewWrap" class="hidden mt-2 flex gap-2">
+              <input id="fCatNew" placeholder="新分類中文名稱 (例：器械)" class="flex-1 px-3 py-2 border border-teal-400 rounded-lg text-sm"/>
+              <button type="button" onclick="createCatInline()" class="text-xs bg-teal-600 text-white px-3 rounded">建立</button>
+              <button type="button" onclick="cancelCatInline()" class="text-xs text-slate-500">取消</button>
+            </div>
+          </div>
+          <div><label class="text-xs text-slate-500">品牌</label>
+            <select id="fBrand" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"></select>
+            <div id="fBrandNewWrap" class="hidden mt-2 flex gap-2">
+              <input id="fBrandNew" placeholder="新品牌中文名稱" class="flex-1 px-3 py-2 border border-teal-400 rounded-lg text-sm"/>
+              <button type="button" onclick="createBrandInline()" class="text-xs bg-teal-600 text-white px-3 rounded">建立</button>
+              <button type="button" onclick="cancelBrandInline()" class="text-xs text-slate-500">取消</button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1 mt-6 text-sm">
+            <label class="flex items-center gap-2"><input id="fActive"           type="checkbox" checked/> <span>上架中</span></label>
+            <label class="flex items-center gap-2"><input id="fFeatured"         type="checkbox"/> <span>放入首頁精選列</span></label>
+            <label class="flex items-center gap-2"><input id="fGroupBuy"         type="checkbox"/> <span>團購商品</span></label>
+            <label class="flex items-center gap-2"><input id="fMonthlySpecial"   type="checkbox"/> <span>本月特價</span></label>
+            <div id="fGroupTargetRow" class="hidden ml-6 mt-1">
+              <label class="text-xs text-slate-500">團購目標數量</label>
+              <input id="fGroupTarget" type="number" min="0" placeholder="0" class="mt-0.5 w-32 px-2 py-1 border border-slate-200 rounded text-sm"/>
+            </div>
+          </div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">中文名稱 *</label>
+            <input id="fNameZh" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">簡短說明 (列表頁顯示，不支援格式)</label>
+            <textarea id="fDesc" rows="2" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"></textarea></div>
+        </div>
+
+        <!-- ============== 圖片 ============== -->
+        <div data-pane="images" class="hidden">
+          <label class="text-xs text-slate-500">商品圖片 (第一張為主圖，可拖曳調整順序)</label>
+          <div id="fImageList" class="flex flex-wrap gap-2 mt-1 min-h-[120px] p-3 border border-dashed border-slate-200 rounded-lg"></div>
+          <div class="flex gap-2 mt-3">
+            <button type="button" onclick="pickImage()" class="text-xs bg-slate-900 text-white px-3 py-2 rounded">+ 從媒體庫新增</button>
+            <span class="text-[11px] text-slate-400 self-center">JPG / PNG / WebP / SVG。建議方形 ≥ 800×800。</span>
+          </div>
+          <input id="fImageUrl"  type="hidden"/>
+          <input id="fImagesCsv" type="hidden"/>
+        </div>
+
+        <!-- ============== 價格 / 庫存 ============== -->
+        <div data-pane="prices" class="hidden space-y-5">
+          <div>
+            <p class="text-xs text-slate-500 mb-2 font-semibold">會員等級價 (Tier 從這四欄擇一)</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div><label class="text-xs text-slate-500">Price A *</label>
+                <input id="fPriceA" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+              <div><label class="text-xs text-slate-500">Price B *</label>
+                <input id="fPriceB" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+              <div><label class="text-xs text-slate-500">Price C</label>
+                <input id="fPriceC" type="number" min="0" placeholder="選填" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+              <div><label class="text-xs text-slate-500">Price D</label>
+                <input id="fPriceD" type="number" min="0" placeholder="選填" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 mb-2 font-semibold">促銷 / 團購</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div><label class="text-xs text-slate-500">原價 (劃線)</label>
+                <input id="fPriceOriginal" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+              <div><label class="text-xs text-slate-500">團購價</label>
+                <input id="fPriceBulk" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+              <div><label class="text-xs text-slate-500">團購最低數量</label>
+                <input id="fBulkMinQty" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 mb-2 font-semibold">庫存</p>
+            <div class="max-w-xs"><label class="text-xs text-slate-500">基本庫存 *</label>
+              <input id="fStock" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+              <p class="text-[11px] text-slate-400 mt-1">若有規格選項，每個規格各有獨立庫存。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============== 規格選項 ============== -->
+        <div data-pane="variants" class="hidden space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-slate-500">設定不同顏色 / 尺寸 / 規格，會員可在商品頁挑選。</p>
+            <button type="button" id="vAddBtn" class="text-xs bg-teal-600 text-white px-3 py-1.5 rounded">+ 新增規格</button>
+          </div>
+          <p id="vSaveHint" class="hidden text-[11px] text-amber-700">先儲存商品後才能新增規格。</p>
+          <div id="vList" class="space-y-2"></div>
+        </div>
+
+        <!-- ============== 介紹 / 影片 ============== -->
+        <div data-pane="content" class="hidden space-y-5">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs text-slate-500 font-semibold">長篇介紹 (HTML)</label>
+              <div class="flex items-center gap-3 text-xs">
+                <button type="button" onclick="insertLongImage()" class="text-teal-600 hover:underline">+ 插入圖片</button>
+                <label class="flex items-center gap-1"><input id="fLongPreview" type="checkbox"/> 預覽</label>
+              </div>
+            </div>
+            <textarea id="fLong" rows="10" class="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"></textarea>
+            <div id="fLongPreviewBox" class="hidden mt-3 p-4 border border-slate-200 rounded-lg bg-white prose"></div>
+            <div id="fOpenLiveProduct" class="hidden mt-2 text-right">
+              <button type="button" onclick="openLiveProduct()" class="text-xs text-teal-600 hover:underline">在新分頁開啟商品頁 ↗</button>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500 font-semibold mb-1">商品介紹小節 (前台 +/- 摺疊)</p>
+            <div id="fAccList" class="space-y-2"></div>
+            <button type="button" onclick="addAccordion()" class="mt-2 text-xs bg-slate-900 text-white px-3 py-1.5 rounded">+ 新增小節</button>
+            <p class="text-[11px] text-slate-400 mt-1">例如：尺寸指南、使用說明、保養方式…</p>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 font-semibold">影片 URL (YouTube / Vimeo / .mp4)</label>
+            <input id="fVideo" placeholder="https://www.youtube.com/watch?v=…" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </div>
+        </div>
+
+        <!-- ============== 標籤 / 進階 ============== -->
+        <div data-pane="advanced" class="hidden space-y-4">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold mb-2">商品標籤</p>
+            <div class="flex flex-wrap gap-4 text-sm">
+              <label class="flex items-center gap-1"><input type="checkbox" data-label="NEW"/>    <span class="text-emerald-600 font-semibold">新品</span></label>
+              <label class="flex items-center gap-1"><input type="checkbox" data-label="HOT"/>    <span class="text-rose-600 font-semibold">熱銷</span></label>
+              <label class="flex items-center gap-1"><input type="checkbox" data-label="SALE"/>   <span class="text-amber-600 font-semibold">特價</span></label>
+              <label class="flex items-center gap-1"><input type="checkbox" data-label="BUNDLE"/> <span class="text-violet-600 font-semibold">組合</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-5 border-t border-slate-100 flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-5 py-2 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    let EDIT_ID = null;
+    let CATS = [];
+    let BRANDS = [];
+    let ACCORDIONS = []; // [{title, body}, ...]
+    let VARIANTS = [];   // server-loaded variants (only available after save)
+    const F = (id) => document.getElementById(id);
+
+    // --- Tab switching ---
+    document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.className = 'tab-btn whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 ' +
+          (on ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-900');
+      });
+      document.querySelectorAll('[data-pane]').forEach(p => {
+        p.classList.toggle('hidden', p.dataset.pane !== tab);
+      });
+      if (tab === 'variants') loadVariants();
+    }
+
+    async function load() {
+      const [pRes, cRes, bRes] = await Promise.all([
+        fetch('/api/admin/catalog/products').then(r=>r.json()),
+        fetch('/api/admin/catalog/categories').then(r=>r.json()),
+        fetch('/api/brands/admin').then(r=>r.json()).catch(() => ({ brands: [] })),
+      ]);
+      CATS = cRes.categories;
+      BRANDS = bRes.brands ?? [];
+      renderCatSelect();
+      renderBrandSelect();
+      F('rows').innerHTML = pRes.products.map(p => `
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-3">
+            <div class="w-12 h-12 rounded bg-slate-100 overflow-hidden grid place-items-center">
+              ${p.imageUrl ? `<img src="${p.imageUrl}" class="w-full h-full object-cover"/>` : '<span class="text-slate-300">📦</span>'}
+            </div>
+          </td>
+          <td class="px-4 py-3 font-mono text-xs">${p.sku}</td>
+          <td class="px-4 py-3 font-semibold">${p.nameZh}</td>
+          <td class="px-4 py-3 text-slate-500">${p.category.nameZh}</td>
+          <td class="px-4 py-3 text-right">NT$ ${p.priceA.toLocaleString()}</td>
+          <td class="px-4 py-3 text-right">NT$ ${p.priceB.toLocaleString()}</td>
+          <td class="px-4 py-3 text-right ${p.stock < 10 ? 'text-amber-600 font-semibold' : ''}">${p.stock}</td>
+          <td class="px-4 py-3 text-center">
+            <span class="text-xs px-2 py-0.5 rounded ${p.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${p.isActive?'上架':'下架'}</span>
+          </td>
+          <td class="px-4 py-3 text-right space-x-3">
+            <button onclick='openEdit(${JSON.stringify(p)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="softDel('${p.id}')" class="text-red-600 text-xs">下架</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCatSelect(selectedId) {
+      const sel = F('fCat');
+      sel.innerHTML = CATS.map(c => `<option value="${c.id}">${c.nameZh}</option>`).join('') +
+        `<option value="__new__">＋ 新增分類…</option>`;
+      if (selectedId) sel.value = selectedId;
+    }
+
+    function renderBrandSelect(selectedId) {
+      const sel = F('fBrand');
+      sel.innerHTML = `<option value="">— 不指定品牌 —</option>` +
+        BRANDS.map(b => `<option value="${b.id}">${b.nameZh}</option>`).join('') +
+        `<option value="__new__">＋ 新增品牌…</option>`;
+      if (selectedId !== undefined) sel.value = selectedId ?? '';
+    }
+
+    window.createBrandInline = async () => {
+      const nameZh = F('fBrandNew').value.trim();
+      if (!nameZh) return alert('請輸入品牌名稱');
+      const r = await fetch('/api/brands/admin', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ nameZh }),
+      });
+      if (!r.ok) return alert('建立失敗');
+      const { brand } = await r.json();
+      const bRes = await fetch('/api/brands/admin').then(r=>r.json());
+      BRANDS = bRes.brands ?? [];
+      renderBrandSelect(brand.id);
+      cancelBrandInline();
+    };
+    window.cancelBrandInline = () => {
+      F('fBrandNew').value = '';
+      F('fBrandNewWrap').classList.add('hidden');
+      if (F('fBrand').value === '__new__') F('fBrand').value = '';
+    };
+    document.addEventListener('change', (e) => {
+      if (e.target?.id === 'fBrand' && e.target.value === '__new__') {
+        F('fBrandNewWrap').classList.remove('hidden');
+        F('fBrandNew').focus();
+      }
+    });
+
+    window.createCatInline = async () => {
+      const nameZh = F('fCatNew').value.trim();
+      if (!nameZh) return alert('請輸入分類名稱');
+      const r = await fetch('/api/admin/catalog/categories', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ nameZh }),
+      });
+      if (!r.ok) return alert('建立失敗');
+      const { category } = await r.json();
+      // Refresh local cache and re-render select, then auto-select the new one
+      const cRes = await fetch('/api/admin/catalog/categories').then(r=>r.json());
+      CATS = cRes.categories;
+      renderCatSelect(category.id);
+      cancelCatInline();
+    };
+
+    window.cancelCatInline = () => {
+      F('fCatNew').value = '';
+      F('fCatNewWrap').classList.add('hidden');
+      // If user had the "+ 新增" placeholder selected, revert to first real category
+      if (F('fCat').value === '__new__' && CATS[0]) F('fCat').value = CATS[0].id;
+    };
+
+    // Reveal inline new-category input when "+ 新增分類…" is selected
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'fCat' && e.target.value === '__new__') {
+        F('fCatNewWrap').classList.remove('hidden');
+        F('fCatNew').focus();
+      }
+    });
+
+    window.openNew = () => { EDIT_ID = null; fillForm({}); F('modalTitle').textContent='新增商品'; F('modal').classList.remove('hidden'); };
+
+    window.openImport = () => {
+      F('importFile').value = '';
+      F('importResult').innerHTML = '';
+      F('importGoBtn').disabled = false;
+      F('importGoBtn').classList.remove('opacity-50','cursor-not-allowed');
+      F('importModal').classList.remove('hidden');
+    };
+    window.closeImport = () => F('importModal').classList.add('hidden');
+
+    window.runImport = async () => {
+      const file = F('importFile').files[0];
+      const out = F('importResult');
+      if (!file) { out.innerHTML = '<p class="text-rose-600">請選擇檔案。</p>'; return; }
+      const csv = await file.text();
+      const btn = F('importGoBtn');
+      btn.disabled = true; btn.classList.add('opacity-50','cursor-not-allowed');
+      out.innerHTML = '<p class="text-slate-500">匯入中…</p>';
+
+      const r = await fetch('/api/admin/catalog/products/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok && !d.created && !d.updated) {
+        out.innerHTML = `<p class="text-rose-600">匯入失敗：${d.error ?? r.status}${d.column ? ' (' + d.column + ')' : ''}</p>`;
+        btn.disabled = false; btn.classList.remove('opacity-50','cursor-not-allowed');
+        return;
+      }
+      const errBlock = (d.errors ?? []).length
+        ? `<div class="mt-3 max-h-48 overflow-y-auto border border-rose-200 rounded-lg p-2 text-xs">
+             <p class="font-semibold text-rose-700 mb-1">${d.errors.length} 列失敗：</p>
+             ${d.errors.map(e => `<p class="text-rose-600">第 ${e.line} 列 ${e.sku ? '('+e.sku+')' : ''}: ${e.error}</p>`).join('')}
+           </div>`
+        : '';
+      out.innerHTML = `
+        <div class="p-3 rounded-lg ${d.errors?.length ? 'bg-amber-50' : 'bg-emerald-50'}">
+          <p class="font-semibold">新增 ${d.created} 筆 · 更新 ${d.updated} 筆${d.errors?.length ? ' · 失敗 ' + d.errors.length + ' 筆' : ''}</p>
+        </div>${errBlock}`;
+      btn.disabled = false; btn.classList.remove('opacity-50','cursor-not-allowed');
+      load(); // refresh table
+    };
+    window.openEdit = (p) => { EDIT_ID = p.id; fillForm(p); F('modalTitle').textContent='編輯商品'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    let CURRENT_IMAGES = []; // array of URLs
+
+    function renderImageList() {
+      const el = F('fImageList');
+      if (CURRENT_IMAGES.length === 0) {
+        el.innerHTML = '<p class="text-xs text-slate-400 self-center px-2">尚未加入圖片</p>';
+      } else {
+        el.innerHTML = CURRENT_IMAGES.map((url, i) => `
+          <div class="relative w-20 h-20 rounded-lg overflow-hidden border ${i===0?'border-teal-500':'border-slate-200'}" draggable="true" data-i="${i}">
+            <img src="${url}" class="w-full h-full object-cover"/>
+            ${i===0 ? '<span class="absolute top-0.5 left-0.5 text-[9px] bg-teal-600 text-white px-1 rounded">主圖</span>' : ''}
+            <button type="button" onclick="removeImage(${i})" class="absolute top-0.5 right-0.5 w-4 h-4 grid place-items-center bg-red-600 text-white text-[10px] rounded-full">×</button>
+          </div>`).join('');
+        // Drag reorder
+        el.querySelectorAll('[draggable=true]').forEach(d => {
+          d.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', d.dataset.i); });
+          d.addEventListener('dragover',  (e) => e.preventDefault());
+          d.addEventListener('drop',      (e) => {
+            const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+            const to   = parseInt(d.dataset.i, 10);
+            if (from === to) return;
+            const m = CURRENT_IMAGES.splice(from, 1)[0];
+            CURRENT_IMAGES.splice(to, 0, m);
+            renderImageList();
+          });
+        });
+      }
+      F('fImageUrl').value  = CURRENT_IMAGES[0] ?? '';
+      F('fImagesCsv').value = CURRENT_IMAGES.join(',');
+    }
+
+    window.removeImage = (i) => { CURRENT_IMAGES.splice(i, 1); renderImageList(); };
+
+    function fillForm(p) {
+      F('fSku').value = p.sku ?? '';
+      F('fNameZh').value = p.nameZh ?? '';
+      F('fDesc').value = p.descriptionZh ?? '';
+      F('fCat').value = p.categoryId ?? (CATS[0]?.id ?? '');
+      F('fCatNewWrap').classList.add('hidden');
+      F('fCatNew').value = '';
+      renderBrandSelect(p.brandId ?? '');
+      F('fBrandNewWrap').classList.add('hidden');
+      F('fBrandNew').value = '';
+      const fromCsv = (p.images ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      CURRENT_IMAGES = fromCsv.length ? fromCsv : (p.imageUrl ? [p.imageUrl] : []);
+      renderImageList();
+      F('fPriceA').value = p.priceA ?? '';
+      F('fPriceB').value = p.priceB ?? '';
+      F('fPriceC').value = p.priceC ?? '';
+      F('fPriceD').value = p.priceD ?? '';
+      F('fPriceOriginal').value = p.priceOriginal ?? '';
+      F('fPriceBulk').value = p.priceBulk ?? '';
+      F('fBulkMinQty').value = p.bulkMinQty ?? '';
+      F('fStock').value = p.stock ?? 0;
+      F('fActive').checked = p.isActive ?? true;
+      F('fFeatured').checked = p.isFeatured ?? false;
+      F('fGroupBuy').checked = p.isGroupBuy ?? false;
+      F('fMonthlySpecial').checked = p.isMonthlySpecial ?? false;
+      F('fGroupTarget').value = p.groupBuyTarget ?? '';
+      F('fGroupTargetRow').classList.toggle('hidden', !F('fGroupBuy').checked);
+      F('fGroupBuy').onchange = () => F('fGroupTargetRow').classList.toggle('hidden', !F('fGroupBuy').checked);
+      F('fImageUrl').value = p.imageUrl ?? '';
+
+      // Rich content
+      F('fLong').value = p.longDescriptionHtml ?? '';
+      F('fVideo').value = p.videoUrl ?? '';
+      try { ACCORDIONS = JSON.parse(p.accordionsJson ?? '[]'); } catch { ACCORDIONS = []; }
+      renderAccordions();
+
+      // Variants (loaded fresh from server in loadVariants)
+      VARIANTS = p.variants ?? [];
+      renderVariants();
+      F('vSaveHint').classList.toggle('hidden', !!EDIT_ID);
+
+      // "Open live product page" only for saved products
+      F('fOpenLiveProduct').classList.toggle('hidden', !p.sku || !EDIT_ID);
+      F('fOpenLiveProduct').dataset.sku = p.sku ?? '';
+
+      const labels = (p.labels ?? '').split(',').map(s=>s.trim()).filter(Boolean);
+      document.querySelectorAll('[data-label]').forEach(cb => { cb.checked = labels.includes(cb.dataset.label); });
+
+      // Always start on the basic tab
+      switchTab('basic');
+    }
+
+    // --- Accordions ---
+    function renderAccordions() {
+      F('fAccList').innerHTML = ACCORDIONS.map((a, i) => `
+        <div class="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
+          <div class="flex items-center gap-2">
+            <input value="${escapeAttr(a.title ?? '')}" placeholder="標題 (例：尺寸指南)"
+                   class="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm"
+                   oninput="ACCORDIONS[${i}].title = this.value"/>
+            <button type="button" onclick="moveAccordion(${i}, -1)" class="text-xs text-slate-500">↑</button>
+            <button type="button" onclick="moveAccordion(${i},  1)" class="text-xs text-slate-500">↓</button>
+            <button type="button" onclick="ACCORDIONS.splice(${i},1); renderAccordions()" class="text-xs text-red-600">×</button>
+          </div>
+          <textarea rows="3" placeholder="內容 (支援 HTML)"
+                    class="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                    oninput="ACCORDIONS[${i}].body = this.value">${escapeHtml(a.body ?? '')}</textarea>
+        </div>`).join('') || '<p class="text-xs text-slate-400">尚未新增小節。</p>';
+    }
+    window.addAccordion = () => { ACCORDIONS.push({ title: '', body: '' }); renderAccordions(); };
+    window.moveAccordion = (i, dir) => {
+      const j = i + dir;
+      if (j < 0 || j >= ACCORDIONS.length) return;
+      const tmp = ACCORDIONS[i]; ACCORDIONS[i] = ACCORDIONS[j]; ACCORDIONS[j] = tmp;
+      renderAccordions();
+    };
+
+    window.insertLongImage = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      const ta = F('fLong');
+      const tag = `<img src="${url}" alt=""/>`;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = ta.value.slice(0,start) + tag + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + tag.length;
+      if (F('fLongPreview').checked) F('fLongPreviewBox').innerHTML = ta.value;
+    };
+    F('fLongPreview').addEventListener('change', (e) => {
+      F('fLongPreviewBox').classList.toggle('hidden', !e.target.checked);
+      if (e.target.checked) F('fLongPreviewBox').innerHTML = F('fLong').value;
+    });
+    F('fLong').addEventListener('input', () => {
+      if (F('fLongPreview').checked) F('fLongPreviewBox').innerHTML = F('fLong').value;
+    });
+
+    window.openLiveProduct = () => {
+      const sku = F('fOpenLiveProduct').dataset.sku;
+      if (sku) window.open('/products/' + encodeURIComponent(sku), '_blank');
+    };
+
+    function escapeAttr(s) { return String(s ?? '').replace(/"/g, '&quot;'); }
+    function escapeHtml(s) { return String(s ?? '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]); }
+
+    // --- Variants ---
+    async function loadVariants() {
+      if (!EDIT_ID) { renderVariants(); return; }
+      try {
+        const r = await fetch('/api/admin/catalog/products/' + EDIT_ID + '/variants');
+        if (r.ok) { const { variants } = await r.json(); VARIANTS = variants; }
+      } catch {}
+      renderVariants();
+    }
+
+    function renderVariants() {
+      if (!EDIT_ID) {
+        F('vList').innerHTML = '<p class="text-xs text-slate-400 text-center py-4">先儲存商品後，才能新增規格選項。</p>';
+        F('vAddBtn').disabled = true;
+        F('vAddBtn').classList.add('opacity-40','cursor-not-allowed');
+        return;
+      }
+      F('vAddBtn').disabled = false;
+      F('vAddBtn').classList.remove('opacity-40','cursor-not-allowed');
+      if (VARIANTS.length === 0) {
+        F('vList').innerHTML = '<p class="text-xs text-slate-400">尚未新增規格。空的話商品頁不會出現挑選器。</p>';
+        return;
+      }
+      F('vList').innerHTML = VARIANTS.map((v, i) => `
+        <div class="border border-slate-200 rounded-lg p-3 bg-slate-50 grid sm:grid-cols-[80px,1fr,120px,90px,90px,90px,50px,40px] gap-2 items-center">
+          <div class="w-16 h-16 bg-white rounded overflow-hidden grid place-items-center">
+            ${v.imageUrl ? `<img src="${v.imageUrl}" class="w-full h-full object-cover"/>` : '<span class="text-slate-300">📦</span>'}
+            <button type="button" onclick="pickVariantImage('${v.id}')" class="text-[10px] text-teal-600 mt-0.5">換圖</button>
+          </div>
+          <div>
+            <input value="${escapeAttr(v.name)}" placeholder="名稱 (例：黑色)"
+                   class="w-full px-2 py-1.5 border border-slate-200 rounded text-sm"
+                   onchange="updateVariant('${v.id}', 'name', this.value)"/>
+            <select onchange="updateVariant('${v.id}', 'optionType', this.value)"
+                    class="mt-1 w-full px-2 py-1 border border-slate-200 rounded text-xs">
+              ${['option','color','size','spec'].map(t => `<option value="${t}" ${v.optionType===t?'selected':''}>${({option:'選項',color:'顏色',size:'尺寸',spec:'規格'})[t]}</option>`).join('')}
+            </select>
+          </div>
+          <input value="${escapeAttr(v.sku ?? '')}" placeholder="規格 SKU"
+                 class="px-2 py-1.5 border border-slate-200 rounded text-sm font-mono"
+                 onchange="updateVariant('${v.id}', 'sku', this.value.trim() || null)"/>
+          <input type="number" min="0" value="${v.priceA ?? ''}" placeholder="Price A"
+                 class="px-2 py-1.5 border border-slate-200 rounded text-sm text-right"
+                 onchange="updateVariant('${v.id}', 'priceA', parseInt(this.value,10) || null)"/>
+          <input type="number" min="0" value="${v.priceB ?? ''}" placeholder="Price B"
+                 class="px-2 py-1.5 border border-slate-200 rounded text-sm text-right"
+                 onchange="updateVariant('${v.id}', 'priceB', parseInt(this.value,10) || null)"/>
+          <input type="number" min="0" value="${v.stock ?? 0}" placeholder="庫存"
+                 class="px-2 py-1.5 border border-slate-200 rounded text-sm text-right"
+                 onchange="updateVariant('${v.id}', 'stock', parseInt(this.value,10) || 0)"/>
+          <label class="text-xs flex items-center gap-1">
+            <input type="checkbox" ${v.isActive?'checked':''}
+                   onchange="updateVariant('${v.id}', 'isActive', this.checked)"/>啟
+          </label>
+          <button type="button" onclick="deleteVariant('${v.id}')" class="text-red-600 text-xs">×</button>
+        </div>`).join('');
+    }
+
+    window.updateVariant = async (id, field, value) => {
+      const v = VARIANTS.find(x => x.id === id);
+      if (v) v[field] = value;
+      await fetch('/api/admin/catalog/variants/' + id, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ [field]: value }),
+      });
+    };
+    window.deleteVariant = async (id) => {
+      if (!confirm('刪除此規格？')) return;
+      await fetch('/api/admin/catalog/variants/' + id, { method:'DELETE' });
+      VARIANTS = VARIANTS.filter(v => v.id !== id);
+      renderVariants();
+    };
+    window.pickVariantImage = async (id) => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      await updateVariant(id, 'imageUrl', url);
+      const v = VARIANTS.find(x => x.id === id); if (v) v.imageUrl = url;
+      renderVariants();
+    };
+    F('vAddBtn').addEventListener('click', async () => {
+      if (!EDIT_ID) return;
+      const r = await fetch('/api/admin/catalog/products/' + EDIT_ID + '/variants', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name: '新規格', optionType: 'option', stock: 0 }),
+      });
+      if (!r.ok) return alert('新增失敗');
+      const { variant } = await r.json();
+      VARIANTS.push(variant); renderVariants();
+    });
+
+    window.pickImage = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      CURRENT_IMAGES.push(url);
+      renderImageList();
+    };
+
+    F('saveBtn').addEventListener('click', async () => {
+      const labels = [...document.querySelectorAll('[data-label]:checked')]
+        .map(cb => cb.dataset.label).join(',');
+      const brandVal = F('fBrand').value;
+      const body = {
+        sku: F('fSku').value.trim(),
+        nameZh: F('fNameZh').value.trim(),
+        descriptionZh: F('fDesc').value.trim() || null,
+        categoryId: F('fCat').value,
+        brandId: brandVal && brandVal !== '__new__' ? brandVal : null,
+        priceA: parseInt(F('fPriceA').value, 10) || 0,
+        priceB: parseInt(F('fPriceB').value, 10) || 0,
+        priceC: F('fPriceC').value ? parseInt(F('fPriceC').value, 10) : null,
+        priceD: F('fPriceD').value ? parseInt(F('fPriceD').value, 10) : null,
+        priceOriginal: F('fPriceOriginal').value ? parseInt(F('fPriceOriginal').value, 10) : null,
+        priceBulk: F('fPriceBulk').value ? parseInt(F('fPriceBulk').value, 10) : null,
+        bulkMinQty: F('fBulkMinQty').value ? parseInt(F('fBulkMinQty').value, 10) : null,
+        labels,
+        stock: parseInt(F('fStock').value, 10) || 0,
+        isActive: F('fActive').checked,
+        isFeatured: F('fFeatured').checked,
+        isGroupBuy: F('fGroupBuy').checked,
+        isMonthlySpecial: F('fMonthlySpecial').checked,
+        groupBuyTarget: F('fGroupTarget').value ? parseInt(F('fGroupTarget').value, 10) : null,
+        imageUrl: F('fImageUrl').value || null,
+        images:   F('fImagesCsv').value || '',
+        longDescriptionHtml: F('fLong').value || null,
+        accordionsJson: JSON.stringify(ACCORDIONS.filter(a => a.title || a.body)),
+        videoUrl: F('fVideo').value.trim() || null,
+      };
+      if (body.categoryId === '__new__') return alert('請先點「建立」完成新增分類，或從下拉選單選擇現有分類');
+      if (brandVal === '__new__') return alert('請先點「建立」完成新增品牌，或選擇現有品牌');
+      if (!body.sku || !body.nameZh || !body.categoryId) return alert('SKU、名稱、分類必填');
+      const url = EDIT_ID ? '/api/admin/catalog/products/' + EDIT_ID : '/api/admin/catalog/products';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) {
+        const d = await r.json();
+        return alert(d.error === 'sku_exists' ? 'SKU 已存在' : '儲存失敗');
+      }
+      closeModal(); load();
+    });
+
+    window.softDel = async (id) => {
+      if (!confirm('將商品下架？(歷史訂單不受影響)')) return;
+      await fetch('/api/admin/catalog/products/' + id, { method:'DELETE' });
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

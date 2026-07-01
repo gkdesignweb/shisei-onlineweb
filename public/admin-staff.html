@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>員工帳號 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide" data-content="nav.brand">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">員工帳號</h1>
+        <p class="text-sm text-slate-500 mt-1">每位員工指派一個「角色」，角色裡的權限決定他能看到 / 操作哪些功能。</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="/admin-staff-roles.html" class="bg-white border border-slate-200 text-sm px-3 py-2 rounded-lg hover:border-teal-500">管理角色與權限</a>
+        <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增員工</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">姓名 / Email</th>
+            <th class="px-4 py-3 text-left">角色</th>
+            <th class="px-4 py-3 text-center">超級管理員</th>
+            <th class="px-4 py-3 text-center">啟用</th>
+            <th class="px-4 py-3 text-left">建立時間</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-lg">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增員工</h3>
+      <div class="grid sm:grid-cols-2 gap-3 text-sm">
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">姓名 *</label>
+          <input id="fName" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">Email *</label>
+          <input id="fEmail" type="email" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="sm:col-span-2">
+          <label class="text-xs text-slate-500" id="fPwLabel">密碼 (至少 8 字元) *</label>
+          <input id="fPassword" type="password" minlength="8" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">角色</label>
+          <select id="fRole" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"></select>
+          <p class="text-[11px] text-slate-400 mt-1">前往「<a href="/admin-staff-roles.html" class="text-teal-600 underline">管理角色與權限</a>」設定每個角色可以做什麼。</p>
+        </div>
+        <div><label class="flex items-center gap-2 mt-2"><input id="fActive" type="checkbox" checked/> 啟用</label></div>
+        <div><label class="flex items-center gap-2 mt-2"><input id="fSuper" type="checkbox"/> 超級管理員 (擁有全部權限)</label></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    let EDIT_ID = null;
+    let ROLES = [];
+    const F = (id) => document.getElementById(id);
+
+    async function load() {
+      const [uRes, rRes] = await Promise.all([
+        fetch('/api/admin/staff').then(r=>r.json()),
+        fetch('/api/admin/staff-roles').then(r=>r.json()),
+      ]);
+      ROLES = rRes.roles ?? [];
+      F('fRole').innerHTML = `<option value="">— 不指派角色 —</option>` +
+        ROLES.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      F('rows').innerHTML = (uRes.users ?? []).map(u => `
+        <tr class="border-t border-slate-100 ${u.isActive ? '' : 'opacity-50'}">
+          <td class="px-4 py-3">
+            <p class="font-semibold">${u.name}</p>
+            <p class="text-xs text-slate-500">${u.email}</p>
+          </td>
+          <td class="px-4 py-3">${u.staffRole ? `<span class="text-xs px-2 py-1 bg-teal-50 text-teal-700 rounded">${u.staffRole.name}</span>` : (u.role !== 'STAFF' ? `<span class="text-xs text-slate-400">${u.role}</span>` : '—')}</td>
+          <td class="px-4 py-3 text-center">${u.isSuperAdmin ? '✓' : ''}</td>
+          <td class="px-4 py-3 text-center">${u.isActive ? '✓' : '停用'}</td>
+          <td class="px-4 py-3 text-xs text-slate-500">${new Date(u.createdAt).toLocaleDateString('zh-TW')}</td>
+          <td class="px-4 py-3 text-right space-x-3">
+            <button onclick='openEdit(${JSON.stringify(u)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="del('${u.id}')" class="text-red-600 text-xs">${u.isActive ? '停用' : '已停用'}</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="6" class="text-center text-slate-500 py-6 text-sm">尚無員工帳號。</td></tr>';
+    }
+
+    window.openNew = () => {
+      EDIT_ID = null;
+      F('fName').value = ''; F('fEmail').value = ''; F('fPassword').value = '';
+      F('fRole').value = ''; F('fActive').checked = true; F('fSuper').checked = false;
+      F('fPwLabel').textContent = '密碼 (至少 8 字元) *';
+      F('fEmail').disabled = false;
+      F('modalTitle').textContent = '新增員工';
+      F('modal').classList.remove('hidden');
+    };
+    window.openEdit = (u) => {
+      EDIT_ID = u.id;
+      F('fName').value = u.name;
+      F('fEmail').value = u.email; F('fEmail').disabled = true;
+      F('fPassword').value = '';
+      F('fPwLabel').textContent = '密碼 (留空則不變更)';
+      F('fRole').value = u.staffRole?.id ?? '';
+      F('fActive').checked = u.isActive;
+      F('fSuper').checked = u.isSuperAdmin;
+      F('modalTitle').textContent = '編輯員工';
+      F('modal').classList.remove('hidden');
+    };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        email: F('fEmail').value.trim(),
+        name: F('fName').value.trim(),
+        password: F('fPassword').value || undefined,
+        staffRoleId: F('fRole').value || null,
+        isActive: F('fActive').checked,
+        isSuperAdmin: F('fSuper').checked,
+      };
+      if (!body.email || !body.name) return alert('姓名與 Email 必填');
+      if (!EDIT_ID && !body.password) return alert('新員工需要設定密碼');
+      const url = EDIT_ID ? '/api/admin/staff/' + EDIT_ID : '/api/admin/staff';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) {
+        const d = await r.json();
+        return alert(d.error === 'email_exists' ? 'Email 已存在' : '儲存失敗：' + (d.error ?? ''));
+      }
+      closeModal(); load();
+    });
+
+    window.del = async (id) => {
+      if (!confirm('停用此員工帳號？(歷史紀錄會保留)')) return;
+      const r = await fetch('/api/admin/staff/' + id, { method:'DELETE' });
+      if (!r.ok) { const d = await r.json(); return alert(d.error === 'cannot_disable_self' ? '無法停用自己' : '停用失敗'); }
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>會員分析 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-6">
+    <a href="/admin-customers.html" class="text-sm text-teal-600 hover:underline">← 回客戶管理</a>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div id="userMeta"><p class="text-slate-400">載入中…</p></div>
+    </section>
+
+    <section class="grid md:grid-cols-3 gap-3">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">本年度消費</p>
+        <p class="text-2xl font-black mt-1 text-teal-700" id="ytdTotal">—</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">去年同期</p>
+        <p class="text-2xl font-black mt-1 text-slate-700" id="lastYearTotal">—</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <p class="text-xs text-slate-500">累計消費 (全期)</p>
+        <p class="text-2xl font-black mt-1 text-slate-900" id="allTimeTotal">—</p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold mb-4">月度消費趨勢 <span class="text-xs text-slate-400">(最近 13 個月)</span></h2>
+      <svg id="monthlyChart" class="w-full" viewBox="0 0 720 220" preserveAspectRatio="none"></svg>
+      <div id="monthlyLabels" class="grid grid-cols-13 text-[10px] text-slate-400 mt-1" style="grid-template-columns:repeat(13,minmax(0,1fr))"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-bold">產品消費比例 <span class="text-xs text-slate-400">Top 10</span></h2>
+        <a id="statementLink" href="#" class="text-xs text-teal-600 hover:underline">查看月結對帳單 →</a>
+      </div>
+      <div id="productBreakdown"><p class="text-sm text-slate-400">載入中…</p></div>
+    </section>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script>
+    const F = (id) => document.getElementById(id);
+    const fmt = (n) => 'NT$ ' + (n ?? 0).toLocaleString();
+    const id = new URLSearchParams(location.search).get('id');
+
+    async function load() {
+      if (!id) { F('userMeta').innerHTML = '<p class="text-rose-600">缺少 ?id= 參數</p>'; return; }
+      const r = await fetch('/api/admin/dashboard/customer/' + id);
+      if (!r.ok) { F('userMeta').innerHTML = '<p class="text-rose-600">讀取失敗</p>'; return; }
+      const d = await r.json();
+      const u = d.user;
+      F('userMeta').innerHTML = `
+        <div class="flex justify-between items-start flex-wrap gap-3">
+          <div>
+            <h1 class="text-2xl font-black">${u.clinicName || u.name}</h1>
+            <p class="text-sm text-slate-500 mt-1">${u.email} · 等級 ${u.tier} · ${u.verificationStatus}</p>
+          </div>
+          <p class="text-xs text-slate-400">加入 ${new Date(u.createdAt).toLocaleDateString('zh-TW')}</p>
+        </div>`;
+      F('ytdTotal').textContent      = fmt(d.yearTotals.thisYear);
+      F('lastYearTotal').textContent = fmt(d.yearTotals.lastYear);
+      F('allTimeTotal').textContent  = fmt(d.yearTotals.allTime);
+
+      drawMonthlyChart(d.monthlySeries);
+      drawProductBreakdown(d.productBreakdown);
+
+      const ym = new Date().toISOString().slice(0, 7);
+      F('statementLink').href = `/admin-statements.html?userId=${id}&month=${ym}`;
+    }
+
+    function drawMonthlyChart(series) {
+      const svg = F('monthlyChart');
+      const W = 720, H = 220, P = 24;
+      const max = Math.max(1, ...series.map((s) => s.total));
+      const step = (W - P * 2) / (series.length - 1 || 1);
+      const points = series.map((s, i) => {
+        const x = P + i * step;
+        const y = H - P - (s.total / max) * (H - P * 2);
+        return [x, y];
+      });
+      const path = points.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
+      const area = `M${points[0][0]},${H-P} ` + points.map(([x,y]) => `L${x},${y}`).join(' ') + ` L${points[points.length-1][0]},${H-P} Z`;
+      svg.innerHTML = `
+        <path d="${area}" fill="rgba(13,148,136,.15)"/>
+        <path d="${path}" stroke="#0d9488" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        ${points.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3.5" fill="#0d9488"><title>${series[i].month}: ${fmt(series[i].total)} (${series[i].orders} orders)</title></circle>`).join('')}`;
+      F('monthlyLabels').innerHTML = series.map((s) => `<span class="text-center">${s.month.slice(5)}</span>`).join('');
+    }
+
+    function drawProductBreakdown(items) {
+      if (items.length === 0) {
+        F('productBreakdown').innerHTML = '<p class="text-sm text-slate-400">尚無消費紀錄。</p>';
+        return;
+      }
+      F('productBreakdown').innerHTML = items.map((p) => `
+        <div class="mb-3">
+          <div class="flex items-baseline justify-between text-sm mb-1">
+            <span class="font-medium truncate pr-3">${p.nameZh}</span>
+            <span class="text-slate-500 text-xs whitespace-nowrap">${fmt(p.revenue)} · ${p.qty} 件 · ${p.ratioPct}%</span>
+          </div>
+          <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-teal-500" style="width:${p.ratioPct}%"></div>
+          </div>
+        </div>`).join('');
+    }
+
+    load();
+  </script>
+</body>
+</html>

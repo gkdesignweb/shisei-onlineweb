@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>資生國際|專業醫療耗材通路</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+</head>
+<body class="font-sans bg-white text-slate-900 antialiased">
+  <!-- Nav -->
+  <header class="absolute top-0 inset-x-0 z-30 bg-white/70 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2 shrink-0">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-9 w-auto hidden"/>
+      </a>
+      <nav id="mainNav" class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700"></nav>
+      <!-- Header search (between main menu and login) -->
+      <form onsubmit="event.preventDefault(); headerSearch()" class="hidden lg:block flex-1 max-w-xs">
+        <div class="relative">
+          <input id="headerSearch" placeholder="搜尋商品…" class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-full bg-white text-sm focus:outline-none focus:border-teal-500"/>
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+      </form>
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <a href="/login.html" data-auth-anon class="hidden sm:inline text-sm font-medium text-slate-700 hover:text-teal-600" data-content="nav.cta.login">登入</a>
+        <a href="/register.html" data-auth-anon class="hidden sm:inline text-sm font-semibold bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800" data-content="nav.cta.register">註冊會員</a>
+        <!-- Logged-in: auth-nav.js renders a dropdown into this host (admin-style) -->
+        <div id="userMenuHost" data-auth-user-menu class="hidden sm:inline-block" style="display:none"></div>
+        <button id="mobileMenuBtn" class="md:hidden p-2 -mr-2" aria-label="開啟選單">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Mobile menu sheet -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-slate-200 bg-white">
+      <nav id="mobileNav" class="px-6 py-4 flex flex-col gap-3 text-base font-medium text-slate-800"></nav>
+      <div class="px-6 pb-4 flex gap-2">
+        <a href="/login.html" data-auth-anon class="flex-1 text-center text-sm font-medium border border-slate-200 rounded-full py-2" data-content="nav.cta.login">登入</a>
+        <a href="/register.html" data-auth-anon class="flex-1 text-center text-sm font-semibold bg-slate-900 text-white rounded-full py-2" data-content="nav.cta.register">註冊會員</a>
+        <a data-auth-user data-auth-user-href href="/account.html" class="flex-1 text-center text-sm font-semibold bg-teal-600 text-white rounded-full py-2" style="display:none">會員資訊</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero (full-bleed, editable bg via /admin-content.html) -->
+  <!--
+    Admin keys:
+      landing.hero.bg.image  → image URL (used when video is empty)
+      landing.hero.bg.video  → video URL (mp4/webm); overrides image when set
+    Replace either via /admin-content.html → key fields.
+  -->
+  <section id="hero" class="hero relative overflow-hidden text-white">
+    <!-- Media layer: video if landing.hero.bg.video is set, else image. -->
+    <video id="heroBgVideo" data-content="landing.hero.bg.video" data-content-attr="src"
+           class="absolute inset-0 w-full h-full object-cover hidden"
+           muted autoplay loop playsinline preload="auto"></video>
+    <img id="heroBgImage" data-content="landing.hero.bg.image" data-content-attr="src"
+         alt="" class="absolute inset-0 w-full h-full object-cover hidden"/>
+    <!-- Fallback gradient until media arrives -->
+    <div id="heroBgFallback" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900"></div>
+
+    <!-- Layered overlays: diagonal darken + bottom fade for depth -->
+    <div class="hero__overlay"></div>
+    <div class="hero__glow"></div>
+    <div class="hero__bottom-fade"></div>
+
+    <div class="relative max-w-7xl mx-auto px-6 pt-28 pb-32 lg:pt-40 lg:pb-44 min-h-[88vh] flex items-center">
+      <div class="max-w-3xl fade-up">
+        <!-- Eyebrow with accent rule -->
+        <div class="hero__eyebrow">
+          <span class="hero__rule"></span>
+          <span data-content="landing.hero.eyebrow">B2B DENTAL SUPPLY PLATFORM</span>
+        </div>
+
+        <h1 class="hero__title">
+          <span class="hero__title-zh" data-content="landing.hero.title1">守護自信笑容的每一刻</span>
+          <span class="hero__title-en" data-content="landing.hero.title2">Support Every Confident Smile.</span>
+        </h1>
+
+        <p class="hero__lede" data-content="landing.hero.subtitle">
+          提供牙科診所與專業醫療人員可信賴的醫材採購服務。<br/>
+          會員登入後可查看專屬價格、團購優惠、發票與配送狀態。
+        </p>
+
+        <div class="hero__ctas">
+          <a href="/register.html" class="btn-hero-primary">
+            <span data-content="landing.hero.ctaPrimary">立即申請會員</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#callback" class="btn-hero-ghost" data-content="landing.hero.ctaSecondary">
+            業務專員回電
+          </a>
+        </div>
+
+        <div class="hero__trust">
+          <span><i></i><b data-content="landing.hero.trust1">通過 GMP 認證</b></span>
+          <span><i></i><b data-content="landing.hero.trust2">安全金流</b></span>
+          <span><i></i><b data-content="landing.hero.trust3">當日出貨</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom scroll cue -->
+    <div class="hero__cue" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+  </section>
+
+  <!-- 跑馬燈 (marquee). Toggle + text via /admin-home.html → landing.marquee.*.
+       The scrolling area is constrained so the text never overlaps the
+       callback card on the right (md+). On mobile the card sits below, so
+       the marquee uses the full width. -->
+  <div id="marqueeBar" class="hidden bg-teal-600 text-white overflow-hidden relative z-10">
+    <div class="max-w-7xl mx-auto px-4 py-2 flex items-center gap-3">
+      <span class="text-xs font-bold tracking-wider bg-white/15 px-2 py-0.5 rounded-full shrink-0">📣 公告</span>
+      <!-- max-w on md+ keeps the right side clear for the callback card overlay. -->
+      <div class="flex-1 overflow-hidden md:max-w-[calc(100%-30rem)]">
+        <p id="marqueeText" class="whitespace-nowrap text-sm" style="animation: marquee 25s linear infinite;"></p>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }</style>
+
+  <!-- Callback card — overlaps the hero bottom more aggressively (-mt-28) on
+       desktop. Sits below the hero on mobile (-mt-12). Z-index above marquee. -->
+  <section class="relative -mt-16 md:-mt-32 z-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div id="callback" class="callback-card max-w-md ml-auto">
+        <p class="callback-card__eyebrow" data-content="landing.callback.title">留下聯絡方式</p>
+        <p class="callback-card__sub" data-content="landing.callback.subtitle">業務專員會在當日內回電給您。</p>
+        <form id="callbackForm" class="callback-card__form">
+          <input id="callbackPhone" type="tel" required pattern="[0-9+\- ]{8,20}" placeholder="09xx-xxx-xxx" inputmode="tel" autocomplete="tel"/>
+          <button aria-label="送出">→</button>
+        </form>
+        <p id="callbackMsg" class="hidden text-xs mt-2"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Banner carousel (above categories) -->
+  <section id="bannerSection" class="hidden pt-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div id="banners" class="relative rounded-2xl overflow-hidden bg-slate-100 aspect-[21/9] sm:aspect-[5/2]">
+        <div id="bannerTrack" class="absolute inset-0 flex transition-transform duration-500 ease-out"></div>
+        <button id="bannerPrev" class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/80 hover:bg-white shadow text-slate-700 z-10">‹</button>
+        <button id="bannerNext" class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full bg-white/80 hover:bg-white shadow text-slate-700 z-10">›</button>
+        <div id="bannerDots" class="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-10"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search bar -->
+  <section class="pt-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6">
+      <form onsubmit="event.preventDefault(); doSearch()" class="relative">
+        <input id="homeSearch" placeholder="搜尋商品 SKU 或名稱…" class="w-full pl-12 pr-24 py-3 sm:py-4 border border-slate-200 rounded-full bg-white shadow-sm focus:outline-none focus:border-teal-500"/>
+        <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <button class="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-600 text-white text-sm font-semibold px-5 py-2 rounded-full hover:bg-teal-700">搜尋</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 熱銷 row (products marked HOT) -->
+  <section id="hotSection" class="pt-12 hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <p class="text-rose-500 font-semibold tracking-widest uppercase text-xs mb-2" data-content="landing.hot.eyebrow">Best Sellers</p>
+          <h2 class="text-3xl lg:text-4xl font-black text-slate-900" data-content="landing.hot.title">熱銷產品</h2>
+        </div>
+        <a href="/shop.html?label=HOT" class="text-sm text-teal-600 font-semibold hover:underline">查看全部 →</a>
+      </div>
+      <div id="hotGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
+    </div>
+  </section>
+
+  <!-- Service category tiles -->
+  <section id="categories" class="py-16 lg:py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="flex items-end justify-between mb-8 lg:mb-10 flex-wrap gap-4">
+        <div>
+          <p class="text-teal-600 font-semibold tracking-widest uppercase text-xs mb-2" data-content="landing.categories.eyebrow">Our Categories</p>
+          <h2 class="text-3xl lg:text-5xl font-black text-slate-900" data-content="landing.categories.title">完整的醫材品項</h2>
+        </div>
+        <a href="/shop.html" class="text-sm font-semibold text-teal-600 hover:text-teal-700">查看全部商品 →</a>
+      </div>
+      <div id="category-grid" class="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory hide-sb">
+        <!-- populated by /js/landing.js -->
+      </div>
+    </div>
+  </section>
+  <style>.hide-sb::-webkit-scrollbar{display:none}.hide-sb{scrollbar-width:none}</style>
+
+  <!-- How it works -->
+  <section id="about" class="py-20 lg:py-28 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <p class="text-teal-600 font-semibold tracking-widest uppercase text-xs mb-2" data-content="landing.how.eyebrow">How it works</p>
+        <h2 class="text-4xl lg:text-5xl font-black text-slate-900" data-content="landing.how.title">三步驟，開啟採購</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl p-8 shadow-sm">
+          <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 font-bold grid place-items-center mb-4">01</div>
+          <h3 class="font-bold text-lg mb-2" data-content="landing.how.step1.title">註冊與身份審核</h3>
+          <p class="text-slate-600 text-sm leading-relaxed" data-content="landing.how.step1.body">提供醫師證書或診所執照，系統審核後立即升級為驗證會員，解鎖完整價格。</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 shadow-sm">
+          <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 font-bold grid place-items-center mb-4">02</div>
+          <h3 class="font-bold text-lg mb-2" data-content="landing.how.step2.title">瀏覽專屬品項</h3>
+          <p class="text-slate-600 text-sm leading-relaxed" data-content="landing.how.step2.body">依品牌、分類與臨床需求快速搜尋產品。會員可查看分級價格、優惠組合、團購方案與精選推薦品項。</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 shadow-sm">
+          <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 font-bold grid place-items-center mb-4">03</div>
+          <h3 class="font-bold text-lg mb-2" data-content="landing.how.step3.title">安全下單，到貨無憂</h3>
+          <p class="text-slate-600 text-sm leading-relaxed" data-content="landing.how.step3.body">支援信用卡、ATM、超商代碼與月結付款。系統自動開立 B2B 電子發票，並提供訂單與物流追蹤。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Footer -->
+  <section class="py-20 lg:py-28">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <h2 class="text-4xl lg:text-5xl font-black text-slate-900 mb-6" data-content="landing.cta.title">準備好升級您的採購流程了嗎？</h2>
+      <p class="text-slate-600 mb-8 max-w-2xl mx-auto" data-content="landing.cta.body">加入超過 500 家合作診所，體驗封閉式 B2B 平台的議價與物流優勢。</p>
+      <a href="/register.html" class="inline-flex items-center gap-2 bg-teal-600 text-white px-8 py-4 rounded-full font-semibold hover:bg-teal-700 shadow-lg shadow-teal-600/30" data-content="landing.cta.button">
+        立即申請會員
+      </a>
+    </div>
+  </section>
+
+  <div id="siteFooter"></div>
+
+  <script src="/js/main-nav.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/landing.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    // ENTER NUMBER form → POST to /api/leads
+    document.getElementById('callbackForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById('callbackPhone').value.trim();
+      const msg = document.getElementById('callbackMsg');
+      msg.classList.remove('hidden');
+      msg.className = 'text-xs mt-2 text-slate-500';
+      msg.textContent = '送出中…';
+      const r = await fetch('/api/leads', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, source: 'landing-callback' }),
+      });
+      if (r.ok) {
+        msg.className = 'text-xs mt-2 text-emerald-700';
+        msg.textContent = '✓ 已收到，將盡快聯繫您！';
+        document.getElementById('callbackPhone').value = '';
+      } else {
+        msg.className = 'text-xs mt-2 text-red-600';
+        msg.textContent = '✗ 送出失敗，請稍後再試。';
+      }
+    });
+    // Marquee bar: drives off /api/site.marquee (enabled + text).
+    (async () => {
+      try {
+        const s = await fetch('/api/site', { cache: 'no-store' }).then((r) => r.json());
+        if (s?.marquee?.enabled && s.marquee.text) {
+          document.getElementById('marqueeText').textContent = s.marquee.text;
+          document.getElementById('marqueeBar').classList.remove('hidden');
+        }
+      } catch {}
+    })();
+
+    // Header search — small input next to login, jumps to shop.html?q=…
+    window.headerSearch = () => {
+      const q = document.getElementById('headerSearch').value.trim();
+      if (!q) return;
+      location.href = '/shop.html?q=' + encodeURIComponent(q);
+    };
+
+    // Reveal hero background: video wins if set, else image; otherwise gradient.
+    setTimeout(() => {
+      const vid = document.getElementById('heroBgVideo');
+      const img = document.getElementById('heroBgImage');
+      const fb  = document.getElementById('heroBgFallback');
+      if (vid && vid.getAttribute('src')) {
+        vid.classList.remove('hidden'); fb?.classList.add('hidden');
+        try { vid.play(); } catch {}
+      } else if (img && img.getAttribute('src')) {
+        img.classList.remove('hidden'); fb?.classList.add('hidden');
+      }
+    }, 600);
+
+    // Hot products row — 4 cards marked label=HOT. Hidden gracefully when none.
+    (async () => {
+      try {
+        const r = await fetch('/api/products?label=HOT');
+        if (!r.ok) return;
+        const { products } = await r.json();
+        const hot = (products ?? []).slice(0, 3);
+        if (hot.length === 0) return;
+        const hotGrid = document.getElementById('hotGrid');
+        document.getElementById('hotSection').classList.remove('hidden');
+        hotGrid.classList.add('fade-up-stagger');
+        hotGrid.innerHTML = hot.map((p) => `
+          <a href="/products/${encodeURIComponent(p.id)}" class="pcard">
+            <div class="pcard__media">
+              ${p.imageUrl ? `<img loading="lazy" src="${p.imageUrl}" alt="${p.nameZh}"/>` : '<div class="grid place-items-center h-full text-5xl">📦</div>'}
+            </div>
+            <div class="pcard__body">
+              <div class="pcard__tags"><span class="pbadge pbadge-HOT">熱銷</span></div>
+              <h3 class="pcard__name">${p.nameZh}</h3>
+            </div>
+          </a>`).join('');
+      } catch {}
+    })();
+  </script>
+  <script>
+    // Mobile menu toggle + mirror main nav into mobile sheet
+    const btn = document.getElementById('mobileMenuBtn');
+    const sheet = document.getElementById('mobileMenu');
+    btn?.addEventListener('click', () => sheet.classList.toggle('hidden'));
+    new MutationObserver(() => {
+      const mn = document.getElementById('mainNav');
+      const mob = document.getElementById('mobileNav');
+      if (mn && mob && mn.innerHTML && !mob.innerHTML) mob.innerHTML = mn.innerHTML;
+    }).observe(document.getElementById('mainNav'), { childList: true, subtree: true });
+  </script>
+</body>
+</html>

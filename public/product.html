@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0d9488"/>
+  <title>商品 · 資生國際 Shisei Dental</title>
+  <meta name="description" id="metaDesc" content="資生國際 Shisei Dental"/>
+  <meta property="og:title"       id="ogTitle" content=""/>
+  <meta property="og:image"       id="ogImage" content=""/>
+  <meta property="og:type" content="product"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <style>
+    .label-NEW    { background:#d1fae5; color:#047857; }
+    .label-HOT    { background:#ffe4e6; color:#be123c; }
+    .label-SALE   { background:#fef3c7; color:#b45309; }
+    .label-BUNDLE { background:#ede9fe; color:#6d28d9; }
+    .thumb.active { outline: 3px solid #0d9488; outline-offset: 2px; }
+    .variant.active { border-color: #0d9488; background: #f0fdfa; }
+    .long-prose h2 { font-size: 1.5rem; font-weight: 800; margin: 1.5rem 0 .75rem; }
+    .long-prose h3 { font-size: 1.15rem; font-weight: 700; margin: 1rem 0 .5rem; }
+    .long-prose p  { line-height: 1.8; color: #334155; margin: .75rem 0; }
+    .long-prose ul, .long-prose ol { margin: .75rem 0 .75rem 1.5rem; line-height: 1.8; color: #334155; }
+    .long-prose ul { list-style: disc; } .long-prose ol { list-style: decimal; }
+    .long-prose img { border-radius: 12px; margin: 1rem 0; max-width: 100%; height: auto; }
+    .long-prose strong { color: #0f172a; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-24 lg:pb-0">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        <span data-logo-fallback class="w-8 h-8 rounded-full bg-teal-500 grid place-items-center text-white font-bold text-sm">M</span>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-700">
+          <a href="/"               class="hover:text-teal-600">回首頁</a>
+          <a href="/shop.html"      class="hover:text-teal-600">所有產品</a>
+          <a href="/promotion.html" class="hover:text-teal-600">檔期優惠專區</a>
+          <a href="/brands"         class="hover:text-teal-600">品牌館</a>
+          <a href="/account.html"   class="hover:text-teal-600">會員中心</a>
+        </nav>
+        <button data-mini-cart data-auth-user style="display:none" class="bg-teal-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-full hover:bg-teal-700 inline-flex items-center gap-1">
+          🛒 <span id="cartCount" class="font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <div id="status" class="grid lg:grid-cols-2 gap-8">
+      <div class="aspect-square bg-slate-100 rounded-2xl animate-pulse"></div>
+      <div class="space-y-4">
+        <div class="h-4 bg-slate-100 rounded animate-pulse w-1/4"></div>
+        <div class="h-8 bg-slate-100 rounded animate-pulse"></div>
+        <div class="h-5 bg-slate-100 rounded animate-pulse w-3/4"></div>
+        <div class="h-12 bg-slate-100 rounded animate-pulse w-1/2 mt-6"></div>
+        <div class="h-32 bg-slate-100 rounded-xl animate-pulse mt-6"></div>
+        <div class="h-12 bg-slate-100 rounded-lg animate-pulse"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile sticky add-to-cart -->
+  <div id="bottomBar" class="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] hidden items-center gap-2 z-40 shadow-2xl">
+    <input id="bQty" type="number" min="1" value="1" class="w-14 px-2 py-2.5 border border-slate-200 rounded-lg text-center"/>
+    <button id="bAdd" class="flex-1 bg-slate-900 text-white text-sm font-bold py-3 rounded-lg hover:bg-slate-800">加入購物車</button>
+    <button id="bBuyNow" class="flex-1 bg-teal-600 text-white text-sm font-bold py-3 rounded-lg hover:bg-teal-700">立即結帳</button>
+  </div>
+
+  <script>
+    const LABEL_ZH = { NEW: '新品', HOT: '熱銷', SALE: '特價', BUNDLE: '組合' };
+    let CURRENT = null;       // product
+    let CURRENT_VARIANT = null; // selected variant id (or null)
+    let CURRENT_IN_WISHLIST = false;
+
+    async function refreshCart() {
+      try {
+        const { items } = await fetch('/api/cart').then(r=>r.json());
+        const n = items.reduce((s,i)=>s+i.quantity, 0);
+        document.getElementById('cartCount').textContent = n;
+      } catch {}
+    }
+
+    function statusText(s) {
+      return ({PENDING:'審核中', APPROVED:'已通過'})[s] ?? s;
+    }
+
+    async function load() {
+      const sku = decodeURIComponent(location.pathname.split('/products/')[1] ?? '');
+      if (!sku) { document.getElementById('status').textContent = '找不到商品。'; return; }
+
+      const [meRes, pRes] = await Promise.all([
+        fetch('/api/auth/me').then(r=>r.json()),
+        fetch('/api/products/sku/' + encodeURIComponent(sku)),
+      ]);
+      if (!pRes.ok) {
+        document.getElementById('status').innerHTML =
+          '<p class="text-2xl mb-2">404</p><p>找不到此商品。</p><a href="/shop.html" class="text-teal-600 underline">回商品專區</a>';
+        return;
+      }
+      const { verified, tier, product: p } = await pRes.json();
+      const user = meRes.user;
+      window.__user = user;
+      window.__isVerified = verified;
+      CURRENT = p;
+      CURRENT_IN_WISHLIST = !!p.inWishlist;
+      // Pre-select the first available variant
+      CURRENT_VARIANT = (p.variants && p.variants.length) ? p.variants[0].id : null;
+
+      // SEO
+      document.title = `${p.nameZh} · 資生國際 Shisei Dental`;
+      document.getElementById('metaDesc').content = p.descriptionZh ?? p.nameZh;
+      document.getElementById('ogTitle').content = p.nameZh;
+      if (p.imageUrl) document.getElementById('ogImage').content = location.origin + p.imageUrl;
+
+      document.getElementById('status').remove();
+      render();
+
+      if (verified) {
+        document.getElementById('bottomBar').classList.remove('hidden');
+        document.getElementById('bottomBar').classList.add('flex');
+        await refreshCart();
+      }
+    }
+
+    function render() {
+      const p = CURRENT;
+      const images = p.images.length ? p.images : (p.imageUrl ? [p.imageUrl] : []);
+      // If a variant has its own image, prepend it
+      const selectedVariant = p.variants?.find(v => v.id === CURRENT_VARIANT);
+      const heroSrc = selectedVariant?.imageUrl ?? images[0];
+
+      const labelBadges = p.labels.map(l => `<span class="text-xs font-bold px-2 py-0.5 rounded label-${l}">${LABEL_ZH[l] ?? l}</span>`).join(' ');
+      const brandLine = p.brand ? `<a href="/brands/${p.brand.slug}" class="text-sm text-teal-700 hover:underline">${p.brand.nameZh}</a>` : '';
+
+      const priceBlock = renderPriceBlock(p, selectedVariant);
+      const variantsBlock = renderVariantsBlock(p);
+
+      const galleryMain = heroSrc
+        ? `<img loading="lazy" id="mainImg" src="${heroSrc}" alt="${p.nameZh}" onclick="openLightbox(this.src)" class="w-full aspect-square object-cover rounded-2xl bg-white cursor-zoom-in"/>`
+        : `<div class="w-full aspect-square rounded-2xl bg-slate-100 grid place-items-center text-7xl">📦</div>`;
+      const thumbs = images.length > 1 ? `
+        <div class="mt-3 grid grid-cols-5 gap-2">
+          ${images.map((u, i) => `
+            <button data-thumb-i="${i}" class="thumb ${i===0?'active':''} aspect-square rounded-lg overflow-hidden bg-white border border-slate-200">
+              <img loading="lazy" src="${u}" class="w-full h-full object-cover"/>
+            </button>`).join('')}
+        </div>` : '';
+
+      const longSection = p.longDescriptionHtml ? `
+        <section class="mt-12">
+          <h2 class="text-xl font-bold mb-3">商品介紹</h2>
+          <div class="long-prose bg-white rounded-2xl p-6 shadow-sm">${p.longDescriptionHtml}</div>
+        </section>` : '';
+
+      const accordionSection = (p.accordions ?? []).length ? `
+        <section class="mt-8">
+          <div class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100">
+            ${p.accordions.map((a, i) => `
+              <details class="group">
+                <summary class="px-6 py-4 cursor-pointer flex items-center justify-between font-semibold">
+                  <span>${a.title}</span>
+                  <span class="text-2xl text-slate-400 group-open:rotate-45 transition">+</span>
+                </summary>
+                <div class="px-6 pb-5 text-sm text-slate-600 leading-relaxed">${a.body}</div>
+              </details>`).join('')}
+          </div>
+        </section>` : '';
+
+      const videoSection = p.videoUrl ? `
+        <section class="mt-8">
+          <h2 class="text-xl font-bold mb-3">影片介紹</h2>
+          ${renderVideo(p.videoUrl)}
+        </section>` : '';
+
+      const wishlistBtn = (window.__isVerified) ? `
+        <button id="wishBtn" aria-label="加入收藏" title="${CURRENT_IN_WISHLIST ? '已收藏' : '加入收藏'}"
+                class="ml-auto w-10 h-10 grid place-items-center rounded-full border border-slate-200 hover:border-rose-400 transition">
+          <svg id="wishIcon" width="22" height="22" viewBox="0 0 24 24"
+               fill="${CURRENT_IN_WISHLIST ? '#ef4444' : 'none'}"
+               stroke="${CURRENT_IN_WISHLIST ? '#ef4444' : '#94a3b8'}"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>` : '';
+
+      document.getElementById('main').innerHTML = `
+        <nav class="text-xs text-slate-500 mb-4 flex items-center gap-2 flex-wrap">
+          <a href="/shop.html" class="hover:text-teal-600">商品專區</a> ›
+          <a href="/shop.html?category=${p.category.slug}" class="hover:text-teal-600">${p.category.nameZh}</a> ›
+          <span class="text-slate-700">${p.sku}</span>
+        </nav>
+        <div class="grid lg:grid-cols-2 gap-8">
+          <div>${galleryMain}${thumbs}</div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">${labelBadges} ${brandLine ? `<span class="text-slate-300">·</span>${brandLine}` : ''} ${wishlistBtn}</div>
+            <p class="text-[11px] text-slate-400 font-mono">${p.sku}</p>
+            <h1 class="text-2xl sm:text-3xl font-black mt-1">${p.nameZh}</h1>
+            <p class="text-sm text-slate-500 mt-1">${p.category.nameZh}</p>
+            ${priceBlock}
+            ${variantsBlock}
+            ${p.descriptionZh ? `<div class="mt-6 text-sm text-slate-700 leading-relaxed whitespace-pre-line">${p.descriptionZh}</div>` : ''}
+            ${window.__isVerified ? `
+              <div class="hidden lg:flex items-center gap-3 mt-8">
+                <input id="dQty" type="number" min="1" value="1" class="w-20 px-3 py-3 border border-slate-200 rounded-lg text-center text-lg"/>
+                <button id="dAdd" class="flex-1 bg-slate-900 text-white text-base font-bold py-3 rounded-lg hover:bg-slate-800">加入購物車</button>
+                <button id="dBuyNow" class="flex-1 bg-teal-600 text-white text-base font-bold py-3 rounded-lg hover:bg-teal-700">立即結帳</button>
+              </div>` : ''}
+          </div>
+        </div>
+        ${longSection}
+        ${accordionSection}
+        ${videoSection}`;
+
+      // Thumbnails
+      document.querySelectorAll('[data-thumb-i]').forEach(b => {
+        b.addEventListener('click', () => {
+          document.getElementById('mainImg').src = images[parseInt(b.dataset.thumbI, 10)];
+          document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+          b.classList.add('active');
+        });
+      });
+      // Variants
+      document.querySelectorAll('[data-variant-id]').forEach(b => {
+        b.addEventListener('click', () => { CURRENT_VARIANT = b.dataset.variantId; render(); });
+      });
+
+      // Add to cart handlers
+      const addToCart = async (qty) => {
+        if (p.variants?.length && !CURRENT_VARIANT) { alert('請選擇規格'); return false; }
+        const r = await fetch('/api/cart', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ productId: p.id, variantId: CURRENT_VARIANT, quantity: qty }),
+        });
+        if (!r.ok) { const d = await r.json(); alert(d.error === 'variant_required' ? '請選擇規格' : '加入失敗'); return false; }
+        return true;
+      };
+      const add = async (qty) => {
+        if (await addToCart(qty)) { await refreshCart(); flash('已加入購物車'); }
+      };
+      const buyNow = async (qty) => {
+        if (await addToCart(qty)) location.href = '/checkout.html';
+      };
+      document.getElementById('dAdd')?.addEventListener('click', () => add(parseInt(document.getElementById('dQty').value, 10) || 1));
+      document.getElementById('bAdd')?.addEventListener('click', () => add(parseInt(document.getElementById('bQty').value, 10) || 1));
+      document.getElementById('dBuyNow')?.addEventListener('click', () => buyNow(parseInt(document.getElementById('dQty').value, 10) || 1));
+      document.getElementById('bBuyNow')?.addEventListener('click', () => buyNow(parseInt(document.getElementById('bQty').value, 10) || 1));
+
+      // Wishlist
+      const wb = document.getElementById('wishBtn');
+      if (wb) wb.addEventListener('click', toggleWishlist);
+    }
+
+    function renderPriceBlock(p, variant) {
+      const user = window.__user;
+      if (!user) return `<div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">請先 <a href="/login.html" class="font-semibold underline">登入</a> 以查看價格。</div>`;
+      if (user.verificationStatus !== 'APPROVED') return `<div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">您的會員身份審核中 (${statusText(user.verificationStatus)})。</div>`;
+      const price = variant?.priceDiscount ?? p.priceDiscount;
+      const stock = variant ? variant.stock : p.stock;
+      const showOriginal = p.priceOriginal && price && p.priceOriginal > price;
+      const savePct = showOriginal ? Math.round((1 - price / p.priceOriginal) * 100) : 0;
+      return `
+        <div class="mt-4 space-y-1">
+          ${showOriginal ? `<p class="text-sm text-slate-500">原價 <s>NT$ ${p.priceOriginal.toLocaleString()}</s>${savePct ? ` <span class="ml-2 text-rose-600 font-bold">-${savePct}%</span>` : ''}</p>` : ''}
+          <p class="text-4xl font-black text-teal-700">NT$ ${price.toLocaleString()}</p>
+          ${p.priceBulk ? `<p class="text-sm font-semibold text-violet-700">滿 ${p.bulkMinQty} 件，每件 NT$ ${p.priceBulk.toLocaleString()}</p>` : ''}
+          <p class="text-xs text-slate-500">${variant ? variant.name + ' · ' : ''}庫存 ${stock} 件</p>
+        </div>`;
+    }
+
+    function renderVariantsBlock(p) {
+      if (!p.variants || p.variants.length === 0) return '';
+      // Group by optionType
+      const groups = {};
+      for (const v of p.variants) (groups[v.optionType] ??= []).push(v);
+      const groupLabels = { color: '顏色', size: '尺寸', spec: '規格', option: '選項' };
+      return `
+        <div class="mt-6 space-y-3">
+          ${Object.entries(groups).map(([type, list]) => `
+            <div>
+              <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">${groupLabels[type] ?? type}</p>
+              <div class="flex flex-wrap gap-2">
+                ${list.map(v => `
+                  <button data-variant-id="${v.id}" class="variant ${v.id===CURRENT_VARIANT?'active':''} flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-teal-400 ${v.stock<=0?'opacity-50':''}">
+                    ${v.imageUrl ? `<img loading="lazy" src="${v.imageUrl}" class="w-6 h-6 rounded object-cover"/>` : ''}
+                    <span>${v.name}</span>
+                    ${v.stock <= 0 ? '<span class="text-xs text-slate-400">缺貨</span>' : ''}
+                  </button>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function renderVideo(url) {
+      // YouTube/Vimeo embed
+      const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
+      if (yt) return `<div class="aspect-video rounded-2xl overflow-hidden bg-black"><iframe src="https://www.youtube.com/embed/${yt[1]}" class="w-full h-full" frameborder="0" allowfullscreen></iframe></div>`;
+      const vm = url.match(/vimeo\.com\/(\d+)/);
+      if (vm) return `<div class="aspect-video rounded-2xl overflow-hidden bg-black"><iframe src="https://player.vimeo.com/video/${vm[1]}" class="w-full h-full" frameborder="0" allowfullscreen></iframe></div>`;
+      // Otherwise assume direct video URL
+      return `<video src="${url}" controls class="w-full rounded-2xl bg-black aspect-video"></video>`;
+    }
+
+    async function toggleWishlist() {
+      if (!CURRENT) return;
+      const next = !CURRENT_IN_WISHLIST;
+      const r = await fetch('/api/wishlist/' + CURRENT.id, { method: next ? 'POST' : 'DELETE' });
+      if (!r.ok) return alert('收藏失敗 (是否已登入?)');
+      CURRENT_IN_WISHLIST = next;
+      const icon = document.getElementById('wishIcon');
+      icon.setAttribute('fill',   next ? '#ef4444' : 'none');
+      icon.setAttribute('stroke', next ? '#ef4444' : '#94a3b8');
+      const btn = document.getElementById('wishBtn');
+      btn.setAttribute('title', next ? '已收藏' : '加入收藏');
+    }
+
+    function flash(msg) {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.className = 'fixed top-20 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-sm px-4 py-2 rounded-lg shadow-xl z-50';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 1800);
+    }
+
+    window.openLightbox = (src) => {
+      const lb = document.createElement('div');
+      lb.className = 'lightbox';
+      lb.innerHTML = `<button class="lb-close" aria-label="關閉">×</button><img src="${src}" alt=""/>`;
+      lb.addEventListener('click', () => lb.remove());
+      document.body.appendChild(lb);
+    };
+
+    load();
+  </script>
+  <div id="siteFooter"></div>
+  <script src="/js/cart-mini.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+</body>
+</html>

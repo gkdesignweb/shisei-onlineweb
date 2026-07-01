@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>檔期優惠 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+</head>
+<body class="bg-slate-50 min-h-screen pb-20 lg:pb-0">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-700">
+          <a href="/"               class="hover:text-teal-600">回首頁</a>
+          <a href="/shop.html"      class="hover:text-teal-600">所有產品</a>
+          <a href="/promotion.html" class="hover:text-teal-600">檔期優惠專區</a>
+          <a href="/brands"         class="hover:text-teal-600">品牌館</a>
+          <a href="/account.html"   class="hover:text-teal-600">會員中心</a>
+        </nav>
+        <button data-mini-cart data-auth-user style="display:none" class="relative bg-teal-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-full hover:bg-teal-700 inline-flex items-center gap-1">
+          🛒 <span id="cartCount" class="font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+    <div class="text-center py-20 text-slate-400">載入中…</div>
+  </main>
+
+  <div id="siteFooter"></div>
+  <script src="/js/cart-mini.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    (async () => {
+      try {
+        const { items } = await fetch('/api/cart').then(r=>r.json());
+        document.getElementById('cartCount').textContent = items.reduce((s,i)=>s+i.quantity, 0);
+      } catch {}
+    })();
+  </script>
+  <script>
+    const fmt = (n) => 'NT$ ' + (n ?? 0).toLocaleString();
+
+    function productCard(p) {
+      const final = p.priceA;
+      const original = p.priceOriginal && p.priceOriginal > final ? p.priceOriginal : null;
+      const pct = original ? Math.round(((original - final) / original) * 100) : 0;
+      const img = (p.imageUrl || p.images?.split(',')[0] || '').trim();
+      return `<a href="/products/${encodeURIComponent(p.id)}" class="group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition overflow-hidden flex flex-col">
+        <div class="aspect-square bg-slate-100 relative overflow-hidden">
+          ${img ? `<img loading="lazy" src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition"/>` : '<div class="grid place-items-center h-full text-5xl">📦</div>'}
+          ${pct > 0 ? `<span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">${pct}% OFF</span>` : ''}
+        </div>
+        <div class="p-3 flex flex-col flex-1">
+          <p class="text-xs text-slate-500 font-semibold truncate">${p.brand?.nameZh ?? ''}</p>
+          <h3 class="text-sm font-bold line-clamp-2 mt-0.5 mb-2 group-hover:text-teal-600">${p.nameZh}</h3>
+          <div class="mt-auto flex items-baseline gap-2">
+            ${original ? `<span class="text-xs text-slate-400 line-through">${fmt(original)}</span>` : ''}
+            <span class="text-lg font-black text-red-600">${fmt(final)}</span>
+          </div>
+          <button class="mt-2 opacity-0 group-hover:opacity-100 transition bg-teal-600 text-white text-xs font-semibold py-1.5 rounded-full">加入購物車</button>
+        </div>
+      </a>`;
+    }
+
+    function groupBuyCard(p) {
+      const final = p.priceA;
+      const original = p.priceOriginal && p.priceOriginal > final ? p.priceOriginal : null;
+      const pct = original ? Math.round(((original - final) / original) * 100) : 0;
+      const target = p.groupBuyTarget || 0;
+      const current = p.groupBuyCurrent || 0;
+      const ratio = target ? Math.min(100, Math.round((current / target) * 100)) : 0;
+      const remaining = Math.max(0, target - current);
+      const img = (p.imageUrl || p.images?.split(',')[0] || '').trim();
+      return `<a href="/products/${encodeURIComponent(p.id)}" class="group bg-white rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition overflow-hidden flex flex-col border border-violet-100">
+        <div class="aspect-square bg-slate-100 relative overflow-hidden">
+          ${img ? `<img loading="lazy" src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition"/>` : '<div class="grid place-items-center h-full text-5xl">📦</div>'}
+          ${pct > 0 ? `<span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">${pct}% OFF</span>` : ''}
+          <span class="absolute top-2 left-2 bg-violet-600 text-white text-[10px] font-bold px-2 py-1 rounded-full">團購</span>
+        </div>
+        <div class="p-3 flex flex-col flex-1">
+          <p class="text-xs text-slate-500 font-semibold truncate">${p.brand?.nameZh ?? ''}</p>
+          <h3 class="text-sm font-bold line-clamp-2 mt-0.5 mb-2 group-hover:text-teal-600">${p.nameZh}</h3>
+          <div class="flex items-baseline gap-2 mb-2">
+            ${original ? `<span class="text-xs text-slate-400 line-through">${fmt(original)}</span>` : ''}
+            <span class="text-lg font-black text-red-600">${fmt(final)}</span>
+          </div>
+          ${target > 0 ? `<div class="mt-auto">
+            <div class="h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+              <div class="h-full bg-violet-500" style="width:${ratio}%"></div>
+            </div>
+            <p class="text-[11px] text-slate-500 text-right">${current} / ${target}${remaining > 0 ? ` · 還差 ${remaining} 組` : ' · 已達標'}</p>
+          </div>` : ''}
+        </div>
+      </a>`;
+    }
+
+    let countdownTimer = null;
+    function renderCountdown(endDate) {
+      if (!endDate) return '';
+      const update = () => {
+        const wrap = document.getElementById('countdown');
+        if (!wrap) return;
+        const diff = new Date(endDate) - new Date();
+        if (diff <= 0) { wrap.innerHTML = '<span class="text-red-300">活動已結束</span>'; clearInterval(countdownTimer); return; }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        wrap.innerHTML = `
+          <div class="grid grid-cols-4 gap-2 text-center">
+            ${[['天',d],['時',h],['分',m],['秒',s]].map(([label, n]) => `
+              <div class="bg-white/15 backdrop-blur rounded-lg p-2">
+                <p class="text-2xl sm:text-3xl font-black font-mono">${String(n).padStart(2,'0')}</p>
+                <p class="text-xs opacity-80">${label}</p>
+              </div>`).join('')}
+          </div>`;
+      };
+      update();
+      countdownTimer = setInterval(update, 1000);
+      return '<div id="countdown" class="mt-6 max-w-sm mx-auto"></div>';
+    }
+
+    (async function load() {
+      const d = await fetch('/api/promotion', { cache:'no-store' }).then(r=>r.json());
+      const p = d.page;
+      if (!p?.isActive) {
+        document.getElementById('main').innerHTML = '<p class="text-center text-slate-500 py-20">檔期活動尚未開始，敬請期待。</p>';
+        return;
+      }
+      const dateRange = (p.startDate && p.endDate)
+        ? `${new Date(p.startDate).toLocaleDateString('zh-TW')} ~ ${new Date(p.endDate).toLocaleDateString('zh-TW')}`
+        : (p.subTitle || '');
+      document.getElementById('main').innerHTML = `
+        <!-- Dynamic header -->
+        <section class="rounded-3xl bg-gradient-to-br from-rose-600 via-pink-600 to-violet-700 text-white p-8 sm:p-12 text-center shadow-xl">
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight">${p.mainTitle}</h1>
+          ${p.subTitle ? `<p class="mt-3 text-lg opacity-90">${p.subTitle}</p>` : ''}
+          ${dateRange ? `<p class="mt-1 text-sm opacity-80">活動期間：${dateRange}</p>` : ''}
+          ${renderCountdown(p.endDate)}
+        </section>
+
+        <!-- Group buy -->
+        ${d.groupBuyProducts.length ? `
+        <section>
+          <h2 class="text-2xl sm:text-3xl font-black mb-4">${p.groupHeading}</h2>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            ${d.groupBuyProducts.map(groupBuyCard).join('')}
+          </div>
+        </section>` : ''}
+
+        <!-- Monthly specials -->
+        ${d.monthlyProducts.length ? `
+        <section>
+          ${p.monthlyBanner ? `<img loading="lazy" src="${p.monthlyBanner}" alt="" class="w-full rounded-2xl mb-6"/>` : ''}
+          <h2 class="text-2xl sm:text-3xl font-black mb-4">${p.monthlyHeading}</h2>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            ${d.monthlyProducts.map(productCard).join('')}
+          </div>
+        </section>` : ''}
+
+        ${(d.groupBuyProducts.length === 0 && d.monthlyProducts.length === 0)
+          ? '<p class="text-center text-slate-500 py-12">目前沒有檔期商品。請至後台「檔期優惠」勾選商品。</p>' : ''}
+      `;
+    })();
+  </script>
+</body>
+</html>

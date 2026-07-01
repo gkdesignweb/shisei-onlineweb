@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>角色與權限 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide" data-content="nav.brand">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">角色與權限</h1>
+        <p class="text-sm text-slate-500 mt-1">每個角色可以勾選不同的權限。員工指派該角色後，立即套用對應的存取限制。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增角色</button>
+    </div>
+
+    <div id="roles" class="space-y-5"></div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增角色</h3>
+      <div class="space-y-3 text-sm">
+        <div><label class="text-xs text-slate-500">角色名稱 *</label>
+          <input id="fName" placeholder="例：店長 / 客服 / 倉管" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">描述</label>
+          <input id="fDesc" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div>
+          <p class="text-xs text-slate-500 mb-2">權限</p>
+          <div class="border border-slate-200 rounded-lg p-3 space-y-4" id="fPerms"></div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    let EDIT_ID = null;
+    let PERMS = [];
+    const F = (id) => document.getElementById(id);
+
+    async function load() {
+      const [rRes, pRes] = await Promise.all([
+        fetch('/api/admin/staff-roles').then(r=>r.json()),
+        fetch('/api/admin/staff-roles/permissions').then(r=>r.json()),
+      ]);
+      PERMS = pRes.permissions;
+      F('roles').innerHTML = (rRes.roles ?? []).map(r => `
+        <section class="bg-white rounded-2xl shadow-sm p-6">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div>
+              <h3 class="font-bold text-lg">${r.name} ${r.isSystem ? '<span class="ml-2 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">系統</span>' : ''}</h3>
+              <p class="text-xs text-slate-500">${r.description ?? ''} · 使用此角色的員工：${r.userCount} 位</p>
+            </div>
+            <div class="space-x-3">
+              <button onclick='openEdit(${JSON.stringify(r)})' class="text-teal-600 text-xs font-semibold">編輯</button>
+              ${r.isSystem || r.userCount > 0 ? '' : `<button onclick="del('${r.id}')" class="text-red-600 text-xs">刪除</button>`}
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            ${r.permissions.length === 0
+              ? '<span class="text-xs text-slate-400">尚未指派任何權限</span>'
+              : r.permissions.map(p => {
+                  const meta = PERMS.find(x => x.key === p);
+                  return `<span class="text-[11px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded">${meta?.label ?? p}</span>`;
+                }).join('')}
+          </div>
+        </section>`).join('') || '<p class="text-slate-500 text-sm text-center py-8">尚無角色，點「+ 新增角色」開始。</p>';
+    }
+
+    function renderPermCheckboxes(checked = []) {
+      const byGroup = {};
+      for (const p of PERMS) (byGroup[p.group] ??= []).push(p);
+      F('fPerms').innerHTML = Object.entries(byGroup).map(([group, items]) => `
+        <div>
+          <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-2">
+            ${group}
+            <button type="button" onclick="checkGroup('${group}', true)" class="text-[10px] text-teal-600 underline">全選</button>
+            <button type="button" onclick="checkGroup('${group}', false)" class="text-[10px] text-slate-500 underline">取消</button>
+          </p>
+          <div class="grid sm:grid-cols-2 gap-1.5">
+            ${items.map(p => `
+              <label class="flex items-center gap-2 text-xs">
+                <input type="checkbox" data-perm="${p.key}" data-group="${p.group}" ${checked.includes(p.key) ? 'checked' : ''}/>
+                <span>${p.label}</span>
+                <span class="font-mono text-[10px] text-slate-400">${p.key}</span>
+              </label>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+
+    window.checkGroup = (group, val) => {
+      document.querySelectorAll(`#fPerms input[data-group="${group}"]`).forEach(cb => cb.checked = val);
+    };
+
+    window.openNew = () => {
+      EDIT_ID = null; F('fName').value=''; F('fDesc').value='';
+      renderPermCheckboxes([]);
+      F('modalTitle').textContent = '新增角色';
+      F('modal').classList.remove('hidden');
+    };
+    window.openEdit = (r) => {
+      EDIT_ID = r.id; F('fName').value = r.name; F('fDesc').value = r.description ?? '';
+      renderPermCheckboxes(r.permissions);
+      F('modalTitle').textContent = '編輯角色：' + r.name;
+      F('modal').classList.remove('hidden');
+    };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        name: F('fName').value.trim(),
+        description: F('fDesc').value.trim() || null,
+        permissions: [...document.querySelectorAll('#fPerms input:checked')].map(cb => cb.dataset.perm),
+      };
+      if (!body.name) return alert('請填入角色名稱');
+      const url = EDIT_ID ? '/api/admin/staff-roles/' + EDIT_ID : '/api/admin/staff-roles';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) { const d = await r.json(); return alert(d.error === 'name_exists' ? '角色名稱已存在' : '儲存失敗'); }
+      closeModal(); load();
+    });
+
+    window.del = async (id) => {
+      if (!confirm('刪除此角色？')) return;
+      const r = await fetch('/api/admin/staff-roles/' + id, { method:'DELETE' });
+      if (!r.ok) {
+        const d = await r.json();
+        if (d.error === 'role_in_use') alert(`仍有 ${d.userCount} 位員工使用此角色，請先指派其他角色再刪除。`);
+        else alert('刪除失敗：' + d.error);
+        return;
+      }
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

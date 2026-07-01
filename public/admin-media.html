@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>媒體庫 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0"><img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/><span class="font-bold tracking-wide">管理後台</span></a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center bg-white mb-8 hover:border-teal-500 transition">
+      <p class="text-slate-600 mb-2">將圖片或影片拖曳到此處，或</p>
+      <label class="inline-block bg-teal-600 text-white text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer hover:bg-teal-700">
+        選擇檔案上傳
+        <input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden"/>
+      </label>
+      <p class="text-xs text-slate-400 mt-3">圖片：JPG / PNG / GIF / WebP / SVG，單檔最大 5 MB · 影片：MP4 / WebM / MOV，單檔最大 100 MB</p>
+    </div>
+
+    <h2 class="font-bold text-lg mb-4">媒體庫</h2>
+    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    async function loadGrid() {
+      const { items } = await fetch('/api/admin/media').then(r=>r.json());
+      const grid = document.getElementById('grid');
+      if (items.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-sm text-slate-500 text-center py-8 bg-white rounded-xl">尚無圖片。</p>';
+        return;
+      }
+      grid.innerHTML = items.map(m => {
+        const isVideo = (m.mimeType || '').startsWith('video/');
+        const thumb = isVideo
+          ? `<video src="${m.url}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video>
+             <span class="absolute top-1 left-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded">▶ 影片</span>`
+          : `<img src="${m.url}" alt="" class="w-full h-full object-cover"/>`;
+        return `
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="aspect-square bg-slate-100 relative">${thumb}</div>
+          <div class="p-2 text-xs">
+            <p class="truncate font-medium" title="${m.originalName}">${m.originalName}</p>
+            <p class="text-slate-400">${formatSize(m.sizeBytes)} · ${m.mimeType || ''}</p>
+            <div class="flex items-center justify-between mt-2">
+              <button onclick="copyUrl('${m.url}')" class="text-teal-600 hover:underline">📋 複製 URL</button>
+              <button onclick="del('${m.id}')" class="text-red-600 hover:underline">刪除</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function formatSize(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+      return (b/1024/1024).toFixed(2) + ' MB';
+    }
+
+    window.copyUrl = async (url) => {
+      await navigator.clipboard.writeText(location.origin + url);
+      toast('已複製 URL');
+    };
+
+    window.del = async (id) => {
+      if (!confirm('刪除此圖片？')) return;
+      await fetch('/api/admin/media/' + id, { method:'DELETE' });
+      loadGrid();
+    };
+
+    async function upload(files) {
+      const fd = new FormData();
+      [...files].forEach(f => fd.append('files', f));
+      const r = await fetch('/api/admin/media', { method:'POST', body: fd });
+      if (!r.ok) { toast('上傳失敗', 'error'); return; }
+      toast('上傳成功');
+      loadGrid();
+    }
+
+    document.getElementById('fileInput').addEventListener('change', (e) => upload(e.target.files));
+    const dz = document.getElementById('dropzone');
+    ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('border-teal-500','bg-teal-50'); }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('border-teal-500','bg-teal-50')));
+    dz.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files) upload(e.dataTransfer.files); });
+
+    function toast(msg, kind='ok') {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.className = 'fixed bottom-6 right-6 text-sm px-4 py-3 rounded-lg shadow-xl ' +
+        (kind === 'error' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2200);
+    }
+
+    loadGrid();
+  </script>
+</body>
+</html>

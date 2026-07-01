@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>客戶來電 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <h1 class="text-2xl font-black mb-1">客戶來電紀錄</h1>
+    <p class="text-sm text-slate-500 mb-6">首頁「Enter Number」 卡片填寫的電話會列在這裡，業務專員可標記為已處理。</p>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">時間</th>
+            <th class="px-4 py-3 text-left">電話</th>
+            <th class="px-4 py-3 text-left">來源</th>
+            <th class="px-4 py-3 text-left">狀態</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    async function load() {
+      const { leads } = await fetch('/api/leads/admin').then(r=>r.json());
+      document.getElementById('rows').innerHTML = (leads ?? []).map(l => `
+        <tr class="border-t border-slate-100 ${l.handled ? 'opacity-60' : ''}">
+          <td class="px-4 py-3 text-xs text-slate-500">${new Date(l.createdAt).toLocaleString('zh-TW')}</td>
+          <td class="px-4 py-3 font-mono">${l.phone}</td>
+          <td class="px-4 py-3 text-slate-500">${l.source}</td>
+          <td class="px-4 py-3">
+            <span class="text-xs px-2 py-0.5 rounded ${l.handled?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">
+              ${l.handled ? '已處理' : '待處理'}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right space-x-3">
+            ${l.handled ? '' : `<button onclick="handle('${l.id}')" class="text-xs text-teal-600">標記已處理</button>`}
+            <button onclick="del('${l.id}')" class="text-xs text-red-600">刪除</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500 text-sm">尚無來電紀錄。</td></tr>';
+    }
+    window.handle = async (id) => { await fetch('/api/leads/admin/'+id+'/handle', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }); load(); };
+    window.del = async (id) => { if (!confirm('刪除？')) return; await fetch('/api/leads/admin/'+id, { method:'DELETE' }); load(); };
+    load();
+  </script>
+</body>
+</html>

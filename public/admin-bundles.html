@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>團購優惠 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">團購優惠</h1>
+        <p class="text-sm text-slate-500 mt-1">A 產品 × 50 + B 產品 × 3 = 一個固定價的組合包。僅登入會員可見。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增團購</button>
+    </div>
+
+    <div id="rows" class="space-y-3"></div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+      <div class="p-6 pb-4 border-b border-slate-100">
+        <h3 id="modalTitle" class="font-bold text-lg">新增團購</h3>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 text-sm space-y-4">
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500">名稱 *</label>
+            <input id="fName" placeholder="例：診所開張採購包" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">Slug (URL，留空自動產生)</label>
+            <input id="fSlug" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">說明</label>
+            <textarea id="fDesc" rows="2" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"></textarea></div>
+          <div class="sm:col-span-2">
+            <label class="text-xs text-slate-500">封面圖片</label>
+            <div class="flex items-center gap-3 mt-1">
+              <div class="w-24 h-16 bg-slate-100 rounded grid place-items-center overflow-hidden">
+                <img id="fImagePreview" class="w-full h-full object-cover hidden"/>
+                <span id="fImagePh" class="text-xl text-slate-300">🎁</span>
+              </div>
+              <button type="button" onclick="pickImage()" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded">媒體庫</button>
+              <button type="button" onclick="clearImage()" class="text-xs text-red-600">清除</button>
+            </div>
+            <input id="fImage" type="hidden"/>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-slate-500 font-semibold">組合內容 *</p>
+            <span id="fSumHint" class="text-xs text-slate-400"></span>
+          </div>
+          <div id="fItems" class="space-y-2"></div>
+          <button type="button" onclick="addItem()" class="mt-2 text-xs bg-slate-900 text-white px-3 py-1.5 rounded">+ 新增商品</button>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div><label class="text-xs text-slate-500">原價 (劃線) *</label>
+            <input id="fOriginal" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+            <button type="button" onclick="fillOriginalFromSum()" class="text-[11px] text-teal-600 mt-1">套用組合原價總和</button></div>
+          <div><label class="text-xs text-slate-500">團購價 *</label>
+            <input id="fBundle" type="number" min="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">排序</label>
+            <input id="fSort" type="number" value="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-500 font-semibold">優惠開始</label>
+            <input id="fStartsAt" type="datetime-local" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 font-semibold">優惠結束</label>
+            <input id="fEndsAt" type="datetime-local" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </div>
+          <p class="sm:col-span-2 text-xs text-slate-400">留空表示無時間限制；過期後前台會自動隱藏。</p>
+        </div>
+
+        <div class="flex items-center gap-5">
+          <label class="flex items-center gap-2"><input id="fActive" type="checkbox" checked/> 啟用</label>
+          <label class="flex items-center gap-2"><input id="fFeatured" type="checkbox" checked/> 顯示於首頁/精選</label>
+        </div>
+      </div>
+      <div class="p-5 border-t border-slate-100 flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-4 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    let EDIT_ID = null;
+    let PRODUCTS = [];
+    let ITEMS = []; // [{productId, quantity}]
+    const F = (id) => document.getElementById(id);
+    function isoToLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const z = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+    }
+
+    async function load() {
+      const [bRes, pRes] = await Promise.all([
+        fetch('/api/bundles/admin').then(r=>r.json()),
+        fetch('/api/admin/catalog/products').then(r=>r.json()),
+      ]);
+      PRODUCTS = pRes.products;
+      F('rows').innerHTML = (bRes.bundles ?? []).map(b => `
+        <div class="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-4">
+          <div class="w-20 h-16 bg-slate-100 rounded overflow-hidden shrink-0 grid place-items-center">
+            ${b.imageUrl ? `<img src="${b.imageUrl}" class="w-full h-full object-cover"/>` : '<span class="text-2xl">🎁</span>'}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold">${b.nameZh}</p>
+            <p class="text-xs text-slate-500">${b.items.map(i => `${i.product.nameZh}×${i.quantity}`).join(' + ')}</p>
+            <p class="text-xs mt-1">
+              <span class="text-slate-400 line-through">NT$ ${b.originalPrice.toLocaleString()}</span>
+              <span class="font-bold text-teal-700 ml-2">NT$ ${b.bundlePrice.toLocaleString()}</span>
+              ${b.isFeatured ? '<span class="ml-2 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded">精選</span>' : ''}
+              ${b.isActive ? '' : '<span class="ml-2 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">停用</span>'}
+            </p>
+          </div>
+          <div class="flex flex-col gap-2 shrink-0">
+            <button onclick='openEdit(${JSON.stringify(b)})' class="text-xs text-teal-600">編輯</button>
+            <button onclick="del('${b.id}')" class="text-xs text-red-600">刪除</button>
+          </div>
+        </div>`).join('') || '<p class="text-center text-slate-500 py-12 bg-white rounded-2xl">尚未建立團購組合。</p>';
+    }
+
+    function updatePreview(url) {
+      const img = F('fImagePreview'), ph = F('fImagePh');
+      if (url) { img.src = url; img.classList.remove('hidden'); ph.classList.add('hidden'); }
+      else { img.classList.add('hidden'); ph.classList.remove('hidden'); }
+    }
+    window.pickImage = async () => { const u = await window.openMediaPicker(); if (u) { F('fImage').value = u; updatePreview(u); } };
+    window.clearImage = () => { F('fImage').value = ''; updatePreview(''); };
+
+    window.openNew = () => { EDIT_ID = null; fill({}); F('modalTitle').textContent='新增團購'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (b) => {
+      EDIT_ID = b.id;
+      fill({
+        nameZh: b.nameZh, slug: b.slug, descriptionZh: b.descriptionZh,
+        imageUrl: b.imageUrl,
+        originalPrice: b.originalPrice, bundlePrice: b.bundlePrice,
+        sortOrder: b.sortOrder, isActive: b.isActive, isFeatured: b.isFeatured,
+        items: b.items.map(i => ({ productId: i.product.id, quantity: i.quantity })),
+      });
+      F('modalTitle').textContent='編輯團購';
+      F('modal').classList.remove('hidden');
+    };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    function fill(b) {
+      F('fName').value = b.nameZh ?? '';
+      F('fSlug').value = b.slug ?? '';
+      F('fDesc').value = b.descriptionZh ?? '';
+      F('fImage').value = b.imageUrl ?? '';
+      F('fOriginal').value = b.originalPrice ?? '';
+      F('fBundle').value = b.bundlePrice ?? '';
+      F('fSort').value = b.sortOrder ?? 0;
+      F('fActive').checked = b.isActive ?? true;
+      F('fFeatured').checked = b.isFeatured ?? true;
+      F('fStartsAt').value = isoToLocal(b.startsAt);
+      F('fEndsAt').value   = isoToLocal(b.endsAt);
+      ITEMS = (b.items ?? []).slice();
+      renderItems();
+      updatePreview(b.imageUrl);
+    }
+
+    function renderItems() {
+      F('fItems').innerHTML = ITEMS.map((it, i) => `
+        <div class="flex gap-2 items-center">
+          <select onchange="ITEMS[${i}].productId=this.value; updateSum()" class="flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-sm">
+            <option value="">— 選擇商品 —</option>
+            ${PRODUCTS.map(p => `<option value="${p.id}" ${p.id===it.productId?'selected':''}>${p.sku} · ${p.nameZh} (NT$ ${p.priceA})</option>`).join('')}
+          </select>
+          <input type="number" min="1" value="${it.quantity}" onchange="ITEMS[${i}].quantity=parseInt(this.value,10)||1; updateSum()"
+                 class="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right" placeholder="數量"/>
+          <span class="text-xs text-slate-400 w-20 text-right">${calcLineTotal(it)}</span>
+          <button onclick="ITEMS.splice(${i},1); renderItems(); updateSum()" class="text-red-600 text-sm w-6">×</button>
+        </div>`).join('') || '<p class="text-xs text-slate-400">尚未加入商品。</p>';
+      updateSum();
+    }
+
+    function calcLineTotal(it) {
+      const p = PRODUCTS.find(x => x.id === it.productId);
+      if (!p) return '';
+      return 'NT$ ' + (p.priceA * (it.quantity || 0)).toLocaleString();
+    }
+    window.updateSum = () => {
+      const sum = ITEMS.reduce((s, it) => {
+        const p = PRODUCTS.find(x => x.id === it.productId);
+        return s + (p ? p.priceA * (it.quantity || 0) : 0);
+      }, 0);
+      F('fSumHint').textContent = `組合內商品原價總和: NT$ ${sum.toLocaleString()}`;
+      renderLineTotals();
+    };
+    function renderLineTotals() {
+      // Update line totals in place
+      document.querySelectorAll('#fItems > div').forEach((row, i) => {
+        const span = row.children[2];
+        if (span) span.textContent = calcLineTotal(ITEMS[i]);
+      });
+    }
+    window.addItem = () => { ITEMS.push({ productId: '', quantity: 1 }); renderItems(); };
+    window.fillOriginalFromSum = () => {
+      const sum = ITEMS.reduce((s, it) => {
+        const p = PRODUCTS.find(x => x.id === it.productId);
+        return s + (p ? p.priceA * (it.quantity || 0) : 0);
+      }, 0);
+      F('fOriginal').value = sum;
+    };
+
+    F('saveBtn').addEventListener('click', async () => {
+      const itemsClean = ITEMS.filter(i => i.productId && i.quantity > 0);
+      if (itemsClean.length === 0) return alert('請至少加入一個商品');
+      const body = {
+        nameZh: F('fName').value.trim(),
+        slug: F('fSlug').value.trim() || undefined,
+        descriptionZh: F('fDesc').value.trim() || null,
+        imageUrl: F('fImage').value || null,
+        originalPrice: parseInt(F('fOriginal').value, 10) || 0,
+        bundlePrice: parseInt(F('fBundle').value, 10) || 0,
+        sortOrder: parseInt(F('fSort').value, 10) || 0,
+        isActive: F('fActive').checked,
+        isFeatured: F('fFeatured').checked,
+        startsAt: F('fStartsAt').value || null,
+        endsAt:   F('fEndsAt').value   || null,
+        items: itemsClean,
+      };
+      if (!body.nameZh || !body.bundlePrice) return alert('名稱與團購價為必填');
+      const url = EDIT_ID ? '/api/bundles/admin/' + EDIT_ID : '/api/bundles/admin';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) { const d = await r.json(); return alert(d.error === 'slug_exists' ? 'Slug 已存在' : '儲存失敗'); }
+      closeModal(); load();
+    });
+
+    window.del = async (id) => {
+      if (!confirm('刪除此團購？')) return;
+      await fetch('/api/bundles/admin/' + id, { method:'DELETE' });
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

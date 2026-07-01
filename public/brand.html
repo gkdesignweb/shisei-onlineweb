@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0d9488"/>
+  <title>品牌 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <style>
+    .label-NEW    { background:#d1fae5; color:#047857; }
+    .label-HOT    { background:#ffe4e6; color:#be123c; }
+    .label-SALE   { background:#fef3c7; color:#b45309; }
+    .label-BUNDLE { background:#ede9fe; color:#6d28d9; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-10">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        <span data-logo-fallback class="w-8 h-8 rounded-full bg-teal-500 grid place-items-center text-white font-bold text-sm">M</span>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-700">
+          <a href="/"               class="hover:text-teal-600">回首頁</a>
+          <a href="/shop.html"      class="hover:text-teal-600">所有產品</a>
+          <a href="/promotion.html" class="hover:text-teal-600">檔期優惠專區</a>
+          <a href="/brands"         class="hover:text-teal-600">品牌館</a>
+          <a href="/account.html"   class="hover:text-teal-600">會員中心</a>
+        </nav>
+        <button data-mini-cart data-auth-user style="display:none" class="relative bg-teal-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-full hover:bg-teal-700 inline-flex items-center gap-1">
+          🛒 <span id="cartCount" class="font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <p id="status" class="text-center text-slate-500 py-20">載入中…</p>
+  </main>
+
+  <script>
+    const LABEL_ZH = { NEW: '新品', HOT: '熱銷', SALE: '特價', BUNDLE: '組合' };
+
+    async function load() {
+      const slug = decodeURIComponent(location.pathname.split('/brands/')[1] ?? '');
+      if (!slug) { document.getElementById('status').textContent = '找不到品牌。'; return; }
+      const res = await fetch('/api/brands/slug/' + encodeURIComponent(slug));
+      if (!res.ok) {
+        document.getElementById('status').innerHTML = '<p class="text-2xl mb-2">404</p><a href="/brands" class="text-teal-600 underline">回品牌列表</a>';
+        return;
+      }
+      const { brand, products } = await res.json();
+      document.title = `${brand.nameZh} · 資生國際 Shisei Dental`;
+
+      const previewCount = 3;
+      const preview = products.slice(0, previewCount);
+      const remaining = products.length - previewCount;
+
+      document.getElementById('main').innerHTML = `
+        <section class="bg-white rounded-2xl shadow-sm p-6 sm:p-10 mb-8">
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <div class="shrink-0 h-24 sm:h-28">
+              ${brand.logoUrl ? `<img loading="lazy" src="${brand.logoUrl}" class="h-24 sm:h-28 w-auto object-contain"/>` : `<div class="w-24 h-24 rounded-full bg-teal-50 grid place-items-center text-3xl font-black text-teal-600">${brand.nameZh.charAt(0)}</div>`}
+            </div>
+            <div class="flex-1 text-center sm:text-left">
+              <h1 class="text-2xl sm:text-3xl font-black">${brand.nameZh}</h1>
+              ${brand.tagline ? `<p class="text-base text-teal-700 italic mt-2">${brand.tagline}</p>` : ''}
+              ${brand.introHtml ? `<div class="mt-3 text-sm text-slate-600 leading-relaxed">${brand.introHtml}</div>` : ''}
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="flex justify-between items-end mb-4">
+            <h2 class="text-xl font-bold">品牌商品</h2>
+            ${remaining > 0 ? `<a href="/shop.html?brand=${brand.slug}" class="text-sm text-teal-600 font-semibold hover:underline">查看全部 ${products.length} 項 →</a>` : ''}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            ${preview.map(productCard).join('') || '<p class="col-span-full text-slate-500 text-center py-8">此品牌尚無商品。</p>'}
+          </div>
+          ${remaining > 0 ? `
+            <div class="mt-6 text-center">
+              <a href="/shop.html?brand=${brand.slug}" class="inline-block bg-slate-900 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-slate-800">查看更多商品 (還有 ${remaining} 項)</a>
+            </div>` : ''}
+        </section>
+      `;
+    }
+
+    function productCard(p) {
+      const tags = (p.labels ?? []).map(l => `<span class="pbadge pbadge-${l}">${LABEL_ZH[l] ?? l}</span>`).join('');
+      return `
+        <a href="/products/${encodeURIComponent(p.id)}" class="pcard">
+          <div class="pcard__media">
+            ${p.imageUrl ? `<img loading="lazy" src="${p.imageUrl}" alt="${p.nameZh}"/>` : '<div class="grid place-items-center h-full text-5xl">📦</div>'}
+          </div>
+          <div class="pcard__body">
+            ${tags ? `<div class="pcard__tags">${tags}</div>` : ''}
+            <h3 class="pcard__name">${p.nameZh}</h3>
+            <p class="text-xs text-slate-500">${p.category?.nameZh ?? ''}</p>
+          </div>
+        </a>`;
+    }
+
+    load();
+  </script>
+  <div id="siteFooter"></div>
+  <script src="/js/cart-mini.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    (async () => {
+      try {
+        const { items } = await fetch('/api/cart').then(r=>r.json());
+        document.getElementById('cartCount').textContent = items.reduce((s,i)=>s+i.quantity,0);
+      } catch {}
+    })();
+  </script>
+</body>
+</html>

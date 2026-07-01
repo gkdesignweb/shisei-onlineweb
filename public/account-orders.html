@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0d9488"/>
+  <title>訂單追蹤 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        <span data-logo-fallback class="w-8 h-8 rounded-full bg-teal-500 grid place-items-center text-white font-bold text-sm">M</span>
+      </a>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <nav class="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-700">
+          <a href="/"               class="hover:text-teal-600">回首頁</a>
+          <a href="/shop.html"      class="hover:text-teal-600">所有產品</a>
+          <a href="/promotion.html" class="hover:text-teal-600">檔期優惠專區</a>
+          <a href="/brands"         class="hover:text-teal-600">品牌館</a>
+          <a href="/account.html"   class="hover:text-teal-600">會員中心</a>
+        </nav>
+        <button data-mini-cart data-auth-user style="display:none" class="bg-teal-600 text-white text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-full hover:bg-teal-700">
+          🛒 <span id="cartCount" class="font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+    <h1 class="text-2xl sm:text-3xl font-black mb-2">訂單追蹤</h1>
+    <p class="text-sm text-slate-500 mb-6">所有歷史訂單與付款狀態。可下載每筆訂單的採購單據作為憑證。</p>
+
+    <!-- Status filter chips -->
+    <div id="statusChips" class="flex gap-2 mb-5 overflow-x-auto pb-2"></div>
+
+    <div id="rows" class="space-y-3"></div>
+  </main>
+
+  <!-- Detail panel -->
+  <div id="detail" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="detailTitle" class="font-bold text-lg"></h3>
+        <button onclick="closeDetail()" class="text-slate-500 hover:text-slate-900 text-xl">×</button>
+      </div>
+      <div id="detailBody" class="p-6 overflow-y-auto flex-1 text-sm"></div>
+      <div class="p-4 border-t border-slate-100 flex justify-end gap-2 flex-wrap">
+        <button id="detailReorderBtn" onclick="reorderFromDetail()" class="hidden text-sm text-teal-700 font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50">🔁 再次購買</button>
+        <button id="detailChangePayBtn" onclick="openChangePayFromDetail()" class="hidden text-sm text-slate-700 font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:border-teal-500">更換付款方式</button>
+        <button id="detailPayBtn" onclick="payNowFromDetail()" class="hidden text-sm bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">💳 立即付款</button>
+        <a id="invoiceLink" target="_blank" class="text-sm bg-slate-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800">下載 / 列印單據</a>
+        <button onclick="closeDetail()" class="text-sm px-4 py-2 rounded-lg border border-slate-200">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change payment method dialog -->
+  <div id="payChange" class="hidden fixed inset-0 bg-black/50 z-[60] grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 class="font-bold text-lg mb-2">更換付款方式</h3>
+      <p class="text-xs text-slate-500 mb-4">選擇新的付款方式，儲存後即可點「立即付款」前往綠界完成繳款。</p>
+      <div class="space-y-2 text-sm" id="payChangeOptions">
+        <label class="flex items-center gap-3 border border-slate-200 rounded-lg p-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+          <input type="radio" name="newPay" value="CREDIT"/> <span>信用卡 (一次付清)</span>
+        </label>
+        <label class="flex items-center gap-3 border border-slate-200 rounded-lg p-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+          <input type="radio" name="newPay" value="CREDIT_INSTALLMENT"/> <span>信用卡分期</span>
+        </label>
+        <label class="flex items-center gap-3 border border-slate-200 rounded-lg p-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+          <input type="radio" name="newPay" value="ATM"/> <span>ATM 虛擬帳號 (3 日內繳款)</span>
+        </label>
+        <label class="flex items-center gap-3 border border-slate-200 rounded-lg p-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+          <input type="radio" name="newPay" value="CVS"/> <span>超商代碼 (7 日內繳款)</span>
+        </label>
+      </div>
+      <p id="payChangeErr" class="text-xs text-red-600 mt-3"></p>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeChangePay()" class="px-4 py-2 text-sm rounded border border-slate-200">取消</button>
+        <button onclick="confirmChangePay()" class="px-4 py-2 text-sm rounded bg-teal-600 text-white font-semibold">儲存並繼續</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="siteFooter"></div>
+  <script src="/js/cart-mini.js"></script>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    let ORDERS = [];
+    let STATUS_FILTER = '';
+    const STATUS = {
+      PENDING_PAYMENT: { zh: '待付款',  cls: 'bg-amber-100 text-amber-700' },
+      PAID:            { zh: '已付款',  cls: 'bg-emerald-100 text-emerald-700' },
+      PROCESSING:      { zh: '處理中',  cls: 'bg-blue-100 text-blue-700' },
+      SHIPPED:         { zh: '已出貨',  cls: 'bg-teal-100 text-teal-700' },
+      DELIVERED:       { zh: '已送達',  cls: 'bg-emerald-100 text-emerald-700' },
+      CANCELLED:       { zh: '已取消',  cls: 'bg-slate-100 text-slate-500' },
+      REFUNDED:        { zh: '已退款',  cls: 'bg-rose-100 text-rose-700' },
+    };
+    const PAY = {
+      CREDIT: '信用卡', CREDIT_INSTALLMENT: '信用卡分期',
+      ATM: 'ATM 轉帳', CVS: '超商代碼', MONTHLY: '月結對帳單',
+    };
+
+    async function load() {
+      const me = await fetch('/api/auth/me').then(r=>r.json());
+      if (!me.user) { location.href = '/login.html?next=/account-orders.html'; return; }
+      try {
+        const cart = await fetch('/api/cart').then(r=>r.json());
+        document.getElementById('cartCount').textContent = cart.items?.reduce((s,i)=>s+i.quantity,0) ?? 0;
+      } catch {}
+      const r = await fetch('/api/orders/mine');
+      const { orders } = await r.json();
+      ORDERS = orders ?? [];
+      renderChips();
+      renderRows();
+    }
+
+    function renderChips() {
+      const counts = ORDERS.reduce((m, o) => (m[o.status] = (m[o.status]||0) + 1, m), {});
+      const chips = [['', '全部', ORDERS.length], ...Object.entries(STATUS).map(([k, v]) => [k, v.zh, counts[k] ?? 0])];
+      document.getElementById('statusChips').innerHTML = chips.map(([k, label, count]) => {
+        const on = STATUS_FILTER === k;
+        return `<button data-filter="${k}" class="whitespace-nowrap text-xs sm:text-sm font-medium px-3 py-1.5 rounded-full border ${on ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200'}">${label} <span class="opacity-60">${count}</span></button>`;
+      }).join('');
+      document.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => {
+        STATUS_FILTER = b.dataset.filter;
+        renderChips(); renderRows();
+      }));
+    }
+
+    function renderRows() {
+      const list = STATUS_FILTER ? ORDERS.filter(o => o.status === STATUS_FILTER) : ORDERS;
+      const c = document.getElementById('rows');
+      if (list.length === 0) { c.innerHTML = '<p class="text-center text-slate-500 py-12 bg-white rounded-2xl">沒有訂單。</p>'; return; }
+      c.innerHTML = list.map(o => {
+        const s = STATUS[o.status] ?? { zh: o.status, cls: 'bg-slate-100' };
+        const date = new Date(o.createdAt).toLocaleDateString('zh-TW');
+        return `
+          <div class="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition cursor-pointer" onclick="openDetail('${o.id}')">
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+              <div>
+                <p class="text-xs text-slate-400 font-mono">${o.merchantTradeNo}</p>
+                <p class="text-xs text-slate-500">建立：${date} · ${PAY[o.paymentMethod] ?? o.paymentMethod}</p>
+              </div>
+              <span class="text-xs px-3 py-1 rounded-full ${s.cls}">${s.zh}</span>
+            </div>
+            <p class="text-sm text-slate-700 mb-2 truncate">${o.items.map(i => i.nameZh + '×' + i.quantity).join('，')}</p>
+            <div class="flex items-end justify-between flex-wrap gap-3">
+              <p class="text-xs text-slate-500">${o.items.length} 項商品 · 收件人 ${o.recipientName}</p>
+              <p class="text-lg font-black text-teal-700">NT$ ${o.total.toLocaleString()}</p>
+            </div>
+            ${o.atmVAccount ? `<p class="text-xs text-amber-700 mt-2">ATM 繳款帳號：${o.atmBankCode}-${o.atmVAccount}</p>` : ''}
+            ${o.cvsPaymentNo ? `<p class="text-xs text-amber-700 mt-2">超商繳款代碼：${o.cvsPaymentNo}</p>` : ''}
+            ${o.trackingNumber ? `<p class="text-xs text-teal-700 mt-2">物流追蹤號：${o.trackingNumber}</p>` : ''}
+            <div class="mt-3 pt-3 border-t border-slate-100 flex justify-end gap-2 flex-wrap" onclick="event.stopPropagation()">
+              ${['PAID','SHIPPED','COMPLETED'].includes(o.status) ? `
+                <button onclick="reorder('${o.id}')" class="text-sm text-teal-700 font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50">
+                  🔁 再次購買
+                </button>` : ''}
+              ${o.status === 'PENDING_PAYMENT' && o.paymentMethod !== 'MONTHLY' ? `
+                <button onclick="openChangePay('${o.id}','${o.paymentMethod}')" class="text-sm text-slate-700 font-semibold px-3 py-2 rounded-lg border border-slate-200 hover:border-teal-500">
+                  更換付款方式
+                </button>
+                <button onclick="payNow('${o.id}')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">
+                  💳 立即付款
+                </button>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    window.payNowFromDetail = () => {
+      const id = document.getElementById('detailPayBtn').dataset.orderId;
+      if (id) payNow(id);
+    };
+    window.reorderFromDetail = () => {
+      const id = document.getElementById('detailReorderBtn').dataset.orderId;
+      if (id) reorder(id);
+    };
+
+    // Change payment method dialog
+    let PAY_CHANGE_ID = null;
+    window.openChangePay = (id, current) => {
+      PAY_CHANGE_ID = id;
+      document.getElementById('payChangeErr').textContent = '';
+      const radio = document.querySelector(`input[name="newPay"][value="${current}"]`);
+      if (radio) radio.checked = true;
+      else document.querySelectorAll('input[name="newPay"]').forEach(r => r.checked = false);
+      document.getElementById('payChange').classList.remove('hidden');
+    };
+    window.openChangePayFromDetail = () => {
+      const btn = document.getElementById('detailChangePayBtn');
+      openChangePay(btn.dataset.orderId, btn.dataset.current);
+    };
+    window.closeChangePay = () => document.getElementById('payChange').classList.add('hidden');
+    window.confirmChangePay = async () => {
+      const next = document.querySelector('input[name="newPay"]:checked')?.value;
+      const err  = document.getElementById('payChangeErr');
+      if (!next) { err.textContent = '請選擇付款方式'; return; }
+      const r = await fetch('/api/orders/' + PAY_CHANGE_ID + '/payment-method', {
+        method: 'PATCH', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ paymentMethod: next }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        err.textContent = d.error === 'not_pending' ? '此訂單已不在待付款狀態' : '更換失敗：' + (d.error ?? '');
+        return;
+      }
+      closeChangePay();
+      closeDetail();
+      load();
+    };
+
+    window.reorder = async (id) => {
+      if (!confirm('將此訂單的商品加入購物車？')) return;
+      const r = await fetch('/api/orders/' + id + '/reorder', { method:'POST' });
+      if (!r.ok) {
+        const d = await r.json().catch(()=>({}));
+        return alert('再次購買失敗：' + (d.error ?? '請聯絡客服'));
+      }
+      const d = await r.json();
+      const addedLines = d.added.map(a =>
+        '• ' + a.nameZh + ' ×' + a.quantity + (a.clampedFrom ? ` (原 ${a.clampedFrom}，依現有庫存調整)` : '')).join('\n');
+      const skippedLines = d.skipped.length
+        ? '\n\n以下商品因不可用而略過：\n' + d.skipped.map(s => '• ' + s.nameZh).join('\n')
+        : '';
+      if (d.added.length === 0 && d.skipped.length > 0) {
+        return alert('此訂單所有商品目前皆無法購買。' + skippedLines);
+      }
+      if (confirm(`已加入購物車：\n${addedLines}${skippedLines}\n\n要前往結帳嗎？`)) {
+        location.href = '/checkout.html';
+      }
+    };
+
+    window.payNow = async (id) => {
+      const r = await fetch('/api/orders/' + id + '/pay-again', { method:'POST' });
+      if (!r.ok) {
+        const d = await r.json().catch(()=>({}));
+        return alert(d.error === 'not_pending' ? '此訂單已不在待付款狀態' : '無法重新付款：' + (d.error ?? '請聯絡客服'));
+      }
+      const { ecpay } = await r.json();
+      // Auto-submit a hidden form to ECPay
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = ecpay.actionUrl;
+      for (const [k, v] of Object.entries(ecpay.fields)) {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = k; i.value = v;
+        form.appendChild(i);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    };
+
+    window.openDetail = async (id) => {
+      const r = await fetch('/api/orders/' + id);
+      if (!r.ok) return alert('讀取失敗');
+      const { order: o } = await r.json();
+      const s = STATUS[o.status] ?? { zh: o.status, cls: 'bg-slate-100' };
+      document.getElementById('detailTitle').textContent = '訂單 ' + o.merchantTradeNo;
+      document.getElementById('invoiceLink').href = '/api/orders/' + o.id + '/invoice';
+      const payBtn = document.getElementById('detailPayBtn');
+      const changeBtn = document.getElementById('detailChangePayBtn');
+      const reorderBtn = document.getElementById('detailReorderBtn');
+      if (o.status === 'PENDING_PAYMENT' && o.paymentMethod !== 'MONTHLY') {
+        payBtn.classList.remove('hidden');
+        payBtn.dataset.orderId = o.id;
+        changeBtn.classList.remove('hidden');
+        changeBtn.dataset.orderId = o.id;
+        changeBtn.dataset.current = o.paymentMethod;
+      } else {
+        payBtn.classList.add('hidden');
+        changeBtn.classList.add('hidden');
+      }
+      if (['PAID','SHIPPED','COMPLETED'].includes(o.status)) {
+        reorderBtn.classList.remove('hidden');
+        reorderBtn.dataset.orderId = o.id;
+      } else {
+        reorderBtn.classList.add('hidden');
+      }
+      document.getElementById('detailBody').innerHTML = `
+        <div class="grid sm:grid-cols-2 gap-4 mb-5">
+          <div>
+            <p class="text-xs text-slate-500">狀態</p>
+            <p class="mt-1"><span class="text-xs px-2 py-0.5 rounded ${s.cls}">${s.zh}</span></p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">付款方式</p>
+            <p class="mt-1 font-semibold">${PAY[o.paymentMethod] ?? o.paymentMethod}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">建立時間</p>
+            <p class="mt-1">${new Date(o.createdAt).toLocaleString('zh-TW')}</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-500">電子發票</p>
+            <p class="mt-1 font-mono">${o.invoiceNumber ?? '尚未開立'}</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mb-1">配送資訊</p>
+        <p class="text-sm font-semibold">${o.recipientName} · ${o.recipientPhone}</p>
+        <p class="text-sm text-slate-600 mb-5">${o.shippingAddress}</p>
+
+        <p class="text-xs text-slate-500 mb-2">商品明細</p>
+        <div class="border border-slate-200 rounded-xl overflow-hidden mb-5">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs text-slate-500">
+              <tr><th class="px-3 py-2 text-left">品名</th><th class="px-3 py-2 text-right">數量</th><th class="px-3 py-2 text-right">單價</th><th class="px-3 py-2 text-right">小計</th></tr>
+            </thead>
+            <tbody>
+              ${o.items.map(i => `
+                <tr class="border-t border-slate-100">
+                  <td class="px-3 py-2">${i.nameZh}${i.variantName ? ` <span class="text-xs text-slate-500">(${i.variantName})</span>` : ''}</td>
+                  <td class="px-3 py-2 text-right">${i.quantity}</td>
+                  <td class="px-3 py-2 text-right">NT$ ${i.unitPrice.toLocaleString()}</td>
+                  <td class="px-3 py-2 text-right">NT$ ${i.lineTotal.toLocaleString()}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="space-y-1 text-sm max-w-xs ml-auto">
+          <div class="flex justify-between"><span class="text-slate-500">小計</span><span>NT$ ${o.subtotal.toLocaleString()}</span></div>
+          ${o.voucherDiscount ? `<div class="flex justify-between text-emerald-700"><span>優惠折抵 ${o.voucherCode ? '('+o.voucherCode+')' : ''}</span><span>- NT$ ${o.voucherDiscount.toLocaleString()}</span></div>` : ''}
+          <div class="flex justify-between"><span class="text-slate-500">運費</span><span>${o.shippingFee === 0 ? '免運' : 'NT$ ' + o.shippingFee.toLocaleString()}</span></div>
+          <div class="flex justify-between text-lg font-black text-teal-700 pt-2 border-t border-slate-200"><span>總計</span><span>NT$ ${o.total.toLocaleString()}</span></div>
+        </div>`;
+      document.getElementById('detail').classList.remove('hidden');
+    };
+    window.closeDetail = () => document.getElementById('detail').classList.add('hidden');
+
+    load();
+  </script>
+</body>
+</html>

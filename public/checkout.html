@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>結帳 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/><span data-logo-fallback class="w-8 h-8 rounded-full bg-teal-500 grid place-items-center text-white font-bold text-sm">M</span>
+      </a>
+      <a href="/shop.html" class="text-sm text-slate-600 hover:text-teal-600">← 繼續購物</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 grid lg:grid-cols-3 gap-8">
+    <!-- Cart summary -->
+    <section class="lg:col-span-1 bg-white rounded-2xl shadow-sm p-6 h-fit">
+      <h2 class="font-bold text-lg mb-4">訂單明細</h2>
+      <div id="cartList" class="space-y-3 text-sm"></div>
+      <div class="border-t border-slate-200 mt-4 pt-4 space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-500">小計</span><span id="subtotal">—</span></div>
+        <div class="flex flex-col gap-1">
+          <div class="flex gap-2">
+            <input id="voucherInput" placeholder="優惠碼" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono uppercase"/>
+            <button id="voucherBtn" onclick="applyVoucher()" type="button" class="text-xs bg-slate-900 text-white px-3 rounded">套用</button>
+          </div>
+          <button type="button" id="showVouchersBtn" onclick="toggleVoucherList()" class="text-xs text-teal-600 self-start hover:underline">▾ 查看可用優惠券</button>
+          <div id="voucherList" class="hidden mt-1 border border-slate-200 rounded-lg p-2 max-h-48 overflow-y-auto space-y-1"></div>
+          <p id="voucherMsg" class="text-xs"></p>
+        </div>
+        <div id="voucherLine" class="hidden flex justify-between text-emerald-700"><span class="text-slate-500">優惠折抵</span><span id="voucherDiscount">—</span></div>
+        <div class="flex justify-between items-baseline gap-2">
+          <span class="text-slate-500">運費 <span id="shippingNote" class="text-[11px] text-slate-400 font-normal"></span></span>
+          <span id="shipping">—</span>
+        </div>
+        <div class="flex justify-between text-lg font-bold pt-2 border-t border-slate-100"><span>總計</span><span id="total" class="text-teal-700">—</span></div>
+      </div>
+    </section>
+
+    <!-- Checkout form -->
+    <section class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold text-lg mb-6" data-content="checkout.title">配送與付款資訊</h2>
+      <form id="form" class="space-y-6">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-semibold text-slate-600">收件人 *</label>
+            <input name="recipientName" autocomplete="name" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-600">聯絡電話 *</label>
+            <input name="recipientPhone" type="tel" inputmode="tel" autocomplete="tel" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-600">配送地區 *</label>
+            <select id="regionSelect" name="recipientRegion" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:border-teal-500">
+              <option value="">載入中…</option>
+            </select>
+            <p id="regionHint" class="text-[11px] text-slate-400 mt-1"></p>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-600">收件地址 *</label>
+            <input name="shippingAddress" autocomplete="street-address" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-600 mb-2">電子發票 (B2B)</p>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs text-slate-500">統一編號 (8 碼)</label>
+              <input name="invoiceTaxId" type="tel" inputmode="numeric" pattern="\d{8}" maxlength="8" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">發票抬頭</label>
+              <input name="invoiceTitle" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-600 mb-2">付款方式 *</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="border border-slate-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+              <input type="radio" name="paymentMethod" value="CREDIT" checked/>
+              <div>
+                <p class="font-semibold text-sm">信用卡 (一次付清)</p>
+                <p class="text-xs text-slate-500">VISA / Master / JCB</p>
+              </div>
+            </label>
+            <label class="border border-slate-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+              <input type="radio" name="paymentMethod" value="CREDIT_INSTALLMENT"/>
+              <div>
+                <p class="font-semibold text-sm">信用卡分期</p>
+                <p class="text-xs text-slate-500">3 / 6 / 12 期</p>
+              </div>
+            </label>
+            <label class="border border-slate-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+              <input type="radio" name="paymentMethod" value="ATM"/>
+              <div>
+                <p class="font-semibold text-sm">ATM 虛擬帳號</p>
+                <p class="text-xs text-slate-500">3 日內繳款</p>
+              </div>
+            </label>
+            <label class="border border-slate-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50">
+              <input type="radio" name="paymentMethod" value="CVS"/>
+              <div>
+                <p class="font-semibold text-sm">超商代碼</p>
+                <p class="text-xs text-slate-500">7 日內至門市繳款</p>
+              </div>
+            </label>
+            <label id="monthlyOption" class="hidden border border-violet-300 rounded-lg p-3 cursor-pointer has-[:checked]:border-violet-600 has-[:checked]:bg-violet-50 sm:col-span-2">
+              <div class="flex items-center gap-3">
+                <input type="radio" name="paymentMethod" value="MONTHLY"/>
+                <div>
+                  <p class="font-semibold text-sm">月繳 (對帳單)</p>
+                  <p class="text-xs text-slate-500">月底結算對帳單，限合格客戶 — 由管理員賦予</p>
+                </div>
+              </div>
+            </label>
+          </div>
+          <div id="installmentBox" class="hidden mt-3">
+            <label class="text-xs text-slate-500">分期期數</label>
+            <select name="installments" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg">
+              <option value="3">3 期</option>
+              <option value="6">6 期</option>
+              <option value="12">12 期</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700" data-content="checkout.cta">前往綠界完成付款</button>
+        <p id="err" class="text-sm text-red-600"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    let SUBTOTAL = 0;
+    let VOUCHER  = null; // { code, discount }
+
+    async function loadCart() {
+      const r = await fetch('/api/cart');
+      if (!r.ok) { location.href = '/login.html'; return; }
+      const { items, subtotal } = await r.json();
+      SUBTOTAL = subtotal;
+      if (items.length === 0) {
+        document.getElementById('cartList').innerHTML = '<p class="text-slate-500">購物車目前是空的。</p>';
+        return;
+      }
+      document.getElementById('cartList').innerHTML = items.map(i => `
+        <div class="flex justify-between">
+          <span>${i.nameZh} <span class="text-slate-400">×${i.quantity}</span></span>
+          <span>NT$ ${i.lineTotal.toLocaleString()}</span>
+        </div>
+      `).join('');
+      renderTotals();
+    }
+
+    // Region picker drives the shipping threshold + fee. Loaded once from
+    // /api/shipping/regions; default region is pre-selected.
+    let REGIONS = [];
+    let CURRENT_REGION = null;
+    async function loadRegions() {
+      try {
+        const d = await fetch('/api/shipping/regions', { cache:'no-store' }).then(r=>r.json());
+        REGIONS = d.regions ?? [];
+      } catch { REGIONS = []; }
+      const sel = document.getElementById('regionSelect');
+      if (REGIONS.length === 0) {
+        sel.innerHTML = '<option value="">— 預設運費 —</option>';
+        CURRENT_REGION = null;
+      } else {
+        sel.innerHTML = REGIONS.map((r) =>
+          `<option value="${r.code}">${r.nameZh}</option>`
+        ).join('');
+        const def = REGIONS.find((r) => r.isDefault) || REGIONS[0];
+        sel.value = def.code;
+        CURRENT_REGION = def;
+      }
+      sel.addEventListener('change', () => {
+        CURRENT_REGION = REGIONS.find((r) => r.code === sel.value) || null;
+        renderTotals();
+      });
+      renderTotals();
+    }
+
+    function renderTotals() {
+      const discount = VOUCHER?.discount ?? 0;
+      const afterVoucher = SUBTOTAL - discount;
+      // Region rules first; fall back to legacy threshold if no region picked.
+      let shipping, threshold;
+      if (CURRENT_REGION) {
+        threshold = CURRENT_REGION.freeAtAmount;
+        shipping  = afterVoucher >= threshold ? 0 : CURRENT_REGION.shippingFee;
+      } else {
+        threshold = 2000;
+        shipping  = afterVoucher >= threshold ? 0 : 120;
+      }
+      document.getElementById('subtotal').textContent = 'NT$ ' + SUBTOTAL.toLocaleString();
+      document.getElementById('shipping').textContent = shipping === 0 ? '免運' : 'NT$ ' + shipping;
+      document.getElementById('total').textContent    = 'NT$ ' + (afterVoucher + shipping).toLocaleString();
+      const noteEl = document.getElementById('shippingNote');
+      if (noteEl) {
+        const fee = CURRENT_REGION?.shippingFee ?? 120;
+        noteEl.textContent = `（滿 NT$ ${threshold.toLocaleString()} 免運，否則 NT$ ${fee}）`;
+      }
+      const hint = document.getElementById('regionHint');
+      if (hint) {
+        const remaining = Math.max(0, threshold - afterVoucher);
+        hint.textContent = remaining === 0
+          ? '✓ 已達免運門檻'
+          : `再消費 NT$ ${remaining.toLocaleString()} 即可享免運`;
+      }
+      const line = document.getElementById('voucherLine');
+      if (discount > 0) {
+        line.classList.remove('hidden'); line.classList.add('flex');
+        document.getElementById('voucherDiscount').textContent = '- NT$ ' + discount.toLocaleString();
+      } else {
+        line.classList.add('hidden'); line.classList.remove('flex');
+      }
+    }
+
+    // Tier-aware voucher picker: GET /api/vouchers/mine → click a card →
+    // fill the code input → run the normal validate flow. Saves customers
+    // from typing codes they were already issued.
+    let MY_VOUCHERS = null;
+    async function ensureMyVouchers() {
+      if (MY_VOUCHERS) return MY_VOUCHERS;
+      try {
+        const r = await fetch('/api/vouchers/mine', { cache:'no-store' });
+        const d = r.ok ? await r.json() : { vouchers: [] };
+        MY_VOUCHERS = d.vouchers ?? [];
+      } catch { MY_VOUCHERS = []; }
+      return MY_VOUCHERS;
+    }
+    window.toggleVoucherList = async () => {
+      const wrap = document.getElementById('voucherList');
+      const btn  = document.getElementById('showVouchersBtn');
+      const open = wrap.classList.contains('hidden');
+      if (!open) { wrap.classList.add('hidden'); btn.textContent = '▾ 查看可用優惠券'; return; }
+      const list = await ensureMyVouchers();
+      if (list.length === 0) {
+        wrap.innerHTML = '<p class="text-xs text-slate-500 p-2 text-center">目前沒有可用的優惠券。</p>';
+      } else {
+        wrap.innerHTML = list.map((v) => {
+          const valueLabel = v.type === 'PERCENT' ? `${v.value}% OFF` : `折抵 NT$ ${v.value.toLocaleString()}`;
+          const min = v.minOrderAmount > 0 ? `滿 NT$ ${v.minOrderAmount.toLocaleString()}` : '無門檻';
+          const ineligible = v.minOrderAmount > 0 && SUBTOTAL < v.minOrderAmount;
+          return `<button type="button" data-code="${v.code}" ${ineligible ? 'disabled' : ''}
+            class="w-full text-left px-3 py-2 rounded-md border ${ineligible ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed' : 'border-teal-200 hover:bg-teal-50'}">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-teal-700">${valueLabel}</span>
+              <span class="font-mono text-[10px] text-slate-500">${v.code}</span>
+            </div>
+            ${v.description ? `<p class="text-xs text-slate-600 mt-0.5">${v.description}</p>` : ''}
+            <p class="text-[11px] text-slate-400 mt-0.5">${min}${ineligible ? ' · 目前未達門檻' : ''}</p>
+          </button>`;
+        }).join('');
+        wrap.querySelectorAll('button[data-code]:not([disabled])').forEach((b) =>
+          b.addEventListener('click', () => {
+            document.getElementById('voucherInput').value = b.dataset.code;
+            applyVoucher();
+            wrap.classList.add('hidden');
+            document.getElementById('showVouchersBtn').textContent = '▾ 查看可用優惠券';
+          }));
+      }
+      wrap.classList.remove('hidden');
+      btn.textContent = '▴ 收合優惠券列表';
+    };
+
+    window.applyVoucher = async () => {
+      const code = document.getElementById('voucherInput').value.trim().toUpperCase();
+      const msg = document.getElementById('voucherMsg');
+      if (!code) { VOUCHER = null; msg.textContent = ''; renderTotals(); return; }
+      const r = await fetch('/api/vouchers/validate', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ code, subtotal: SUBTOTAL }),
+      });
+      const data = await r.json();
+      if (data.valid) {
+        VOUCHER = { code, discount: data.discount };
+        msg.className = 'text-xs text-emerald-700';
+        msg.textContent = `✓ ${data.message}`;
+      } else {
+        VOUCHER = null;
+        msg.className = 'text-xs text-red-600';
+        msg.textContent = '✗ ' + (data.message ?? '優惠碼無效');
+      }
+      renderTotals();
+    };
+
+    document.querySelectorAll('input[name=paymentMethod]').forEach(el => {
+      el.addEventListener('change', () => {
+        const box = document.getElementById('installmentBox');
+        box.classList.toggle('hidden', el.value !== 'CREDIT_INSTALLMENT' || !el.checked);
+      });
+    });
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      if (VOUCHER?.code) data.voucherCode = VOUCHER.code;
+      const res = await fetch('/api/orders/checkout', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        document.getElementById('err').textContent = '結帳失敗：' + (json.error ?? '');
+        return;
+      }
+      // Monthly billing: no gateway redirect — confirm + bounce to account
+      if (json.monthly) {
+        alert('✓ 訂單已建立，將計入本月對帳單。收據已寄至您的 Email。');
+        location.href = '/account.html';
+        return;
+      }
+      // Auto-submit a hidden form to ECPay
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = json.ecpay.actionUrl;
+      for (const [k,v] of Object.entries(json.ecpay.fields)) {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = k; i.value = v;
+        form.appendChild(i);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    });
+
+    // Pre-fill recipient / phone / address / tax from saved profile
+    (async () => {
+      try {
+        const { user } = await fetch('/api/auth/me').then(r=>r.json());
+        if (!user) return;
+        const f = (n, v) => { const el = document.querySelector(`[name="${n}"]`); if (el && !el.value && v) el.value = v; };
+        f('recipientName',   user.name);
+        f('recipientPhone',  user.phone);
+        f('shippingAddress', user.clinicAddress);
+        f('invoiceTaxId',    user.taxId);
+        f('invoiceTitle',    user.companyTitle);
+        if (user.canMonthlyPay) document.getElementById('monthlyOption').classList.remove('hidden');
+      } catch {}
+    })();
+
+    loadCart();
+    loadRegions();
+  </script>
+  <div id="siteFooter"></div>
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/footer.js"></script>
+  <script src="/js/pwa.js"></script>
+</body>
+</html>

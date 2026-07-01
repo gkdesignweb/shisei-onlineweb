@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>首頁橫幅 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">首頁橫幅</h1>
+        <p class="text-sm text-slate-500 mt-1">前台首頁「商品分類」上方的輪播橫幅。每張會自動播放 5 秒。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增橫幅</button>
+    </div>
+
+    <div id="rows" class="space-y-3"></div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-xl">
+      <h3 id="modalTitle" class="font-bold text-lg mb-4">新增橫幅</h3>
+      <div class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-500">橫幅圖片 *</label>
+          <div class="flex items-center gap-3 mt-1">
+            <div class="w-40 h-24 rounded-lg bg-slate-100 grid place-items-center overflow-hidden">
+              <img id="fImagePreview" class="w-full h-full object-cover hidden"/>
+              <span id="fImagePh" class="text-2xl text-slate-300">🖼️</span>
+            </div>
+            <button type="button" onclick="pickImage()" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded">從媒體庫選擇</button>
+          </div>
+          <input id="fImage" type="hidden"/>
+          <p class="text-[11px] text-slate-400 mt-1">建議寬高比 16:5 或 21:9，最小 1600px 寬。</p>
+        </div>
+        <div><label class="text-xs text-slate-500">連結 (點擊跳轉)</label>
+          <input id="fLink" placeholder="/shop.html?featured=1 或 https://…" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">說明文字 (可選，HTML)</label>
+          <input id="fCaption" placeholder='例：<b>限時優惠</b> 全館 95 折' class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500">排序</label>
+            <input id="fSort" type="number" value="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="flex items-center gap-2 mt-6"><input id="fActive" type="checkbox" checked/> 啟用</label></div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    let EDIT_ID = null;
+    const F = (id) => document.getElementById(id);
+
+    async function load() {
+      const { banners } = await fetch('/api/banners/admin?placement=CAROUSEL').then(r=>r.json());
+      F('rows').innerHTML = (banners ?? []).map(b => `
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden flex items-center">
+          <div class="w-40 h-24 bg-slate-100 shrink-0">
+            <img src="${b.imageUrl}" class="w-full h-full object-cover"/>
+          </div>
+          <div class="flex-1 px-5 py-3 min-w-0">
+            <p class="font-mono text-xs text-slate-400 truncate">${b.imageUrl}</p>
+            ${b.linkUrl ? `<p class="text-xs text-teal-700 truncate">→ ${b.linkUrl}</p>` : ''}
+            ${b.captionHtml ? `<div class="text-sm mt-1 line-clamp-1">${b.captionHtml}</div>` : ''}
+            <p class="text-xs text-slate-400">排序 ${b.sortOrder} · ${b.isActive ? '已啟用' : '停用'}</p>
+          </div>
+          <div class="px-5 py-3 flex flex-col gap-2 shrink-0">
+            <button onclick='openEdit(${JSON.stringify(b)})' class="text-xs text-teal-600">編輯</button>
+            <button onclick="del('${b.id}')" class="text-xs text-red-600">刪除</button>
+          </div>
+        </div>`).join('') || '<p class="text-center text-slate-500 py-12 bg-white rounded-2xl">尚未新增橫幅。</p>';
+    }
+
+    function updatePreview(url) {
+      const img = F('fImagePreview'), ph = F('fImagePh');
+      if (url) { img.src = url; img.classList.remove('hidden'); ph.classList.add('hidden'); }
+      else { img.classList.add('hidden'); ph.classList.remove('hidden'); }
+    }
+    window.pickImage = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      F('fImage').value = url; updatePreview(url);
+    };
+
+    window.openNew = () => { EDIT_ID = null; fill({}); F('modalTitle').textContent='新增橫幅'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (b) => { EDIT_ID = b.id; fill(b); F('modalTitle').textContent='編輯橫幅'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    function fill(b) {
+      F('fImage').value = b.imageUrl ?? '';
+      F('fLink').value = b.linkUrl ?? '';
+      F('fCaption').value = b.captionHtml ?? '';
+      F('fSort').value = b.sortOrder ?? 0;
+      F('fActive').checked = b.isActive ?? true;
+      updatePreview(b.imageUrl);
+    }
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        imageUrl: F('fImage').value,
+        linkUrl: F('fLink').value || null,
+        captionHtml: F('fCaption').value || null,
+        sortOrder: parseInt(F('fSort').value, 10) || 0,
+        isActive: F('fActive').checked,
+        placement: 'CAROUSEL',
+      };
+      if (!body.imageUrl) return alert('請選擇圖片');
+      const url = EDIT_ID ? '/api/banners/admin/' + EDIT_ID : '/api/banners/admin';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) return alert('儲存失敗');
+      closeModal(); load();
+    });
+
+    window.del = async (id) => {
+      if (!confirm('刪除此橫幅？')) return;
+      await fetch('/api/banners/admin/' + id, { method:'DELETE' });
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

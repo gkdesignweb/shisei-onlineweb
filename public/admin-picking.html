@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>提貨單 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div class="mb-6">
+      <h1 class="text-2xl font-black">提貨單</h1>
+      <p class="text-sm text-slate-500 mt-1">選擇日期，自動彙總當日所有有效訂單的商品需求量，可預覽、列印 PDF 或下載 CSV。</p>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+      <div class="flex flex-wrap items-end gap-3">
+        <div>
+          <label class="text-xs text-slate-500 font-semibold">日期</label>
+          <input id="datePicker" type="date" class="mt-1 px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm"/>
+        </div>
+        <button onclick="goPrev()" class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white hover:bg-slate-50">← 前一天</button>
+        <button onclick="goNext()" class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white hover:bg-slate-50">後一天 →</button>
+        <button onclick="goToday()" class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white hover:bg-slate-50">今日</button>
+        <div class="flex-1"></div>
+        <button id="printBtn"  class="px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-lg hover:bg-teal-700">🖨 預覽 / 列印 PDF</button>
+        <button id="csvBtn"    class="px-4 py-2 text-sm font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800">📥 下載 CSV</button>
+      </div>
+    </section>
+
+    <section id="summary" class="grid grid-cols-3 gap-4 mb-6"></section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+      <h2 class="text-lg font-bold mb-3 border-l-4 border-teal-600 pl-3">當日提貨總表</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left w-12">#</th>
+              <th class="px-3 py-2 text-left">SKU</th>
+              <th class="px-3 py-2 text-left">品牌</th>
+              <th class="px-3 py-2 text-left">商品名稱</th>
+              <th class="px-3 py-2 text-right w-20">合計</th>
+              <th class="px-3 py-2 text-right w-20">訂單數</th>
+            </tr>
+          </thead>
+          <tbody id="totalsBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="text-lg font-bold mb-3 border-l-4 border-teal-600 pl-3">逐單明細</h2>
+      <div id="ordersList" class="space-y-3"></div>
+    </section>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script>
+    const ymd = (d) => {
+      const z = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    };
+    const picker = document.getElementById('datePicker');
+    picker.value = ymd(new Date());
+
+    function shift(days) {
+      const [y,m,d] = picker.value.split('-').map(Number);
+      const dt = new Date(y, m-1, d + days);
+      picker.value = ymd(dt);
+      load();
+    }
+    window.goPrev  = () => shift(-1);
+    window.goNext  = () => shift(1);
+    window.goToday = () => { picker.value = ymd(new Date()); load(); };
+    picker.addEventListener('change', load);
+
+    document.getElementById('printBtn').onclick = () => {
+      window.open('/api/admin/picking/print?date=' + picker.value, '_blank');
+    };
+    document.getElementById('csvBtn').onclick = () => {
+      window.location.href = '/api/admin/picking/csv?date=' + picker.value;
+    };
+
+    async function load() {
+      const date = picker.value;
+      const totalsBody = document.getElementById('totalsBody');
+      const ordersList = document.getElementById('ordersList');
+      totalsBody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">載入中…</td></tr>';
+      ordersList.innerHTML = '<p class="text-sm text-slate-400 text-center py-6">載入中…</p>';
+
+      const r = await fetch('/api/admin/picking/preview?date=' + date);
+      if (!r.ok) {
+        totalsBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-rose-600">載入失敗 (${r.status})</td></tr>`;
+        ordersList.innerHTML = '';
+        return;
+      }
+      const data = await r.json();
+      renderSummary(data);
+      renderTotals(data);
+      renderOrders(data);
+    }
+
+    function renderSummary(d) {
+      const totalUnits = d.totals.reduce((s,t) => s + t.quantity, 0);
+      document.getElementById('summary').innerHTML = `
+        <div class="bg-white rounded-xl p-4 shadow-sm">
+          <p class="text-xs text-slate-500">訂單數</p>
+          <p class="text-2xl font-black mt-1">${d.orders.length}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm">
+          <p class="text-xs text-slate-500">商品品項</p>
+          <p class="text-2xl font-black mt-1">${d.totals.length}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm">
+          <p class="text-xs text-slate-500">總件數</p>
+          <p class="text-2xl font-black mt-1 text-teal-700">${totalUnits}</p>
+        </div>`;
+    }
+
+    function renderTotals(d) {
+      const body = document.getElementById('totalsBody');
+      if (d.totals.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-400">當日無訂單</td></tr>';
+        return;
+      }
+      body.innerHTML = d.totals.map((t, i) => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-3 py-2 text-slate-400">${i+1}</td>
+          <td class="px-3 py-2 font-mono text-xs text-slate-700">${esc(t.sku)}</td>
+          <td class="px-3 py-2 text-slate-600">${esc(t.brandZh)}</td>
+          <td class="px-3 py-2 font-medium">${esc(t.nameZh)}${t.variantName ? ` <span class="text-xs text-violet-600">(${esc(t.variantName)})</span>` : ''}</td>
+          <td class="px-3 py-2 text-right font-bold text-teal-700 tabular-nums">${t.quantity}</td>
+          <td class="px-3 py-2 text-right text-xs text-slate-500 tabular-nums">${t.orderCount}</td>
+        </tr>`).join('');
+    }
+
+    function renderOrders(d) {
+      const host = document.getElementById('ordersList');
+      if (d.orders.length === 0) {
+        host.innerHTML = '<p class="text-center py-8 text-slate-400">當日無訂單</p>';
+        return;
+      }
+      host.innerHTML = d.orders.map((o) => {
+        const time = new Date(o.createdAt).toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' });
+        return `
+          <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <div class="bg-slate-50 px-4 py-2 flex flex-wrap items-center gap-2 text-sm">
+              <span class="font-black">#${esc(o.orderNo)}</span>
+              <span class="text-xs text-slate-500">${time}</span>
+              <span class="text-xs px-2 py-0.5 bg-teal-100 text-teal-800 rounded-full">${esc(o.status)}</span>
+              <span class="ml-auto text-xs text-slate-600">${esc(o.clinic || o.customerName)} · ${esc(o.recipientName)} · ${esc(o.recipientPhone || '')}</span>
+            </div>
+            <table class="w-full text-sm">
+              <tbody class="divide-y divide-slate-100">
+                ${o.items.map((it) => `
+                  <tr>
+                    <td class="px-4 py-2 font-mono text-xs text-slate-600 w-32">${esc(it.sku)}</td>
+                    <td class="px-4 py-2">${esc(it.nameZh)}${it.variantName ? ` <span class="text-xs text-violet-600">(${esc(it.variantName)})</span>` : ''}</td>
+                    <td class="px-4 py-2 text-right font-bold tabular-nums w-20">×${it.quantity}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }).join('');
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[<>&"']/g, c =>
+        ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;' })[c]);
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>分類管理 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0"><img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/><span class="font-bold tracking-wide">管理後台</span></a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-black">商品分類</h1>
+        <p class="text-sm text-slate-500 mt-1">在此新增、編輯與排序商品分類；slug 用於前台 URL。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增分類</button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-5 py-3 text-left">排序</th>
+            <th class="px-5 py-3 text-left">中文名稱</th>
+            <th class="px-5 py-3 text-left">英文名稱</th>
+            <th class="px-5 py-3 text-left">Slug</th>
+            <th class="px-5 py-3 text-left">商品數</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 grid place-items-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 id="modalTitle" class="font-bold mb-4">新增分類</h3>
+      <div class="space-y-3 text-sm">
+        <div><label class="text-xs text-slate-500">中文名稱 *</label>
+          <input id="fNameZh" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">英文名稱</label>
+          <input id="fNameEn" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">Slug (空白則自動生成)</label>
+          <input id="fSlug" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+        <div><label class="text-xs text-slate-500">排序</label>
+          <input id="fSort" type="number" value="0" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div>
+          <label class="text-xs text-slate-500">圖示 (可選，留空則自動產生)</label>
+          <div class="flex items-center gap-3 mt-1">
+            <div class="w-14 h-14 rounded-lg bg-slate-100 grid place-items-center overflow-hidden">
+              <img id="fIconPreview" class="w-full h-full object-contain hidden"/>
+              <span id="fIconPh" class="text-xl text-slate-300">🎨</span>
+            </div>
+            <button type="button" onclick="pickIcon()" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded">媒體庫</button>
+            <button type="button" onclick="clearIcon()" class="text-xs text-red-600">清除</button>
+          </div>
+          <input id="fIcon" type="hidden"/>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    let EDIT_ID = null;
+    const F = (id) => document.getElementById(id);
+
+    async function load() {
+      const { categories } = await fetch('/api/admin/catalog/categories').then(r=>r.json());
+      F('rows').innerHTML = categories.map(c => `
+        <tr class="border-t border-slate-100">
+          <td class="px-5 py-3">${c.sortOrder}</td>
+          <td class="px-5 py-3 font-semibold">${c.nameZh}</td>
+          <td class="px-5 py-3 text-slate-500">${c.nameEn ?? '—'}</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">${c.slug}</td>
+          <td class="px-5 py-3">${c._count.products}</td>
+          <td class="px-5 py-3 text-right space-x-3">
+            <button onclick='openEdit(${JSON.stringify(c)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="del('${c.id}', ${c._count.products})" class="text-red-600 text-xs">刪除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.openNew = () => { EDIT_ID = null; fillForm({}); F('modalTitle').textContent='新增分類'; F('modal').classList.remove('hidden'); };
+    window.openEdit = (c) => { EDIT_ID = c.id; fillForm(c); F('modalTitle').textContent='編輯分類'; F('modal').classList.remove('hidden'); };
+    window.closeModal = () => F('modal').classList.add('hidden');
+    function fillForm(c){
+      F('fNameZh').value=c.nameZh??''; F('fNameEn').value=c.nameEn??'';
+      F('fSlug').value=c.slug??''; F('fSort').value=c.sortOrder??0;
+      F('fIcon').value = c.iconUrl ?? '';
+      updateIconPreview(c.iconUrl);
+    }
+    function updateIconPreview(url) {
+      const img = F('fIconPreview'), ph = F('fIconPh');
+      if (url) { img.src = url; img.classList.remove('hidden'); ph.classList.add('hidden'); }
+      else { img.classList.add('hidden'); ph.classList.remove('hidden'); }
+    }
+    window.pickIcon = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      F('fIcon').value = url; updateIconPreview(url);
+    };
+    window.clearIcon = () => { F('fIcon').value=''; updateIconPreview(''); };
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        nameZh: F('fNameZh').value.trim(),
+        nameEn: F('fNameEn').value.trim() || null,
+        slug: F('fSlug').value.trim() || undefined,
+        iconUrl: F('fIcon').value || null,
+        sortOrder: parseInt(F('fSort').value, 10) || 0,
+      };
+      if (!body.nameZh) return alert('請填入中文名稱');
+      const url = EDIT_ID ? '/api/admin/catalog/categories/' + EDIT_ID : '/api/admin/catalog/categories';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) return alert('儲存失敗');
+      closeModal(); load();
+    });
+
+    window.del = async (id, productCount) => {
+      if (productCount > 0) return alert(`此分類下有 ${productCount} 個商品，請先移除或改分類。`);
+      if (!confirm('確定刪除？')) return;
+      const r = await fetch('/api/admin/catalog/categories/' + id, { method:'DELETE' });
+      if (!r.ok) return alert('刪除失敗');
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

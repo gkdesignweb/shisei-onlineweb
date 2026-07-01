@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "prisma generate",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/(.*)",       "destination": "/api" },
+    { "source": "/products/:sku",  "destination": "/api" },
+    { "source": "/brands",         "destination": "/api" },
+    { "source": "/brands/:slug",   "destination": "/api" },
+    { "source": "/p/:slug",        "destination": "/api" },
+    { "source": "/healthz",        "destination": "/api" }
+  ]
+}

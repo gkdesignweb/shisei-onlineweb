@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>客戶管理 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black mb-1">客戶管理</h1>
+        <p class="text-sm text-slate-500">後台可協助開立帳號、編輯資料，並調整等級、審核狀態與月繳資格。</p>
+      </div>
+      <button onclick="openNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增客戶</button>
+    </div>
+
+    <div class="flex gap-3 mb-4 flex-wrap">
+      <input id="q" placeholder="搜尋 email / 姓名 / 診所 / 統編…" class="flex-1 min-w-[240px] px-3 py-2 border border-slate-200 rounded-lg bg-white"/>
+      <select id="tier" class="px-3 py-2 border border-slate-200 rounded-lg bg-white">
+        <option value="">全部等級</option>
+      </select>
+      <select id="status" class="px-3 py-2 border border-slate-200 rounded-lg bg-white">
+        <option value="">全部審核狀態</option><option value="APPROVED">已通過</option><option value="PENDING">審核中</option><option value="REJECTED">未通過</option>
+      </select>
+      <label class="flex items-center gap-2 text-sm"><input id="monthly" type="checkbox"/> 僅顯示月繳</label>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 text-left">姓名 / 診所</th>
+            <th class="px-4 py-3 text-left">Email</th>
+            <th class="px-4 py-3 text-left">等級</th>
+            <th class="px-4 py-3 text-left">審核</th>
+            <th class="px-4 py-3 text-center">月繳</th>
+            <th class="px-4 py-3 text-center">啟用</th>
+            <th class="px-4 py-3 text-left">建立</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Create / Edit modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="modalTitle" class="font-bold text-lg">新增客戶</h3>
+        <button onclick="closeModal()" class="text-slate-500 hover:text-slate-900 text-xl">×</button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 text-sm">
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">Email *</label>
+            <input id="fEmail" type="email" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div class="sm:col-span-2">
+            <label id="fPwLabel" class="text-xs text-slate-500">密碼 (至少 8 字元) *</label>
+            <input id="fPassword" type="password" minlength="8" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+          </div>
+          <div><label class="text-xs text-slate-500">姓名 *</label>
+            <input id="fName" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">聯絡電話</label>
+            <input id="fPhone" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">診所 / 機構名稱</label>
+            <input id="fClinic" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">診所地址</label>
+            <input id="fAddress" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">醫師證書 / 執照</label>
+            <input id="fLicense" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">統一編號 (8 碼)</label>
+            <input id="fTaxId" pattern="\d{8}" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div class="sm:col-span-2"><label class="text-xs text-slate-500">發票抬頭</label>
+            <input id="fTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+          <div><label class="text-xs text-slate-500">會員等級</label>
+            <select id="fTier" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white"></select></div>
+          <div><label class="text-xs text-slate-500">審核狀態</label>
+            <select id="fStatus" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white">
+              <option value="APPROVED">已通過</option>
+              <option value="PENDING">審核中</option>
+              <option value="REJECTED">未通過</option>
+            </select></div>
+          <div class="flex items-center gap-5 mt-2 sm:col-span-2">
+            <label class="flex items-center gap-2"><input id="fMonthly" type="checkbox"/> 月繳付款資格</label>
+            <label class="flex items-center gap-2"><input id="fActive" type="checkbox" checked/> 啟用</label>
+          </div>
+          <p id="fErr" class="text-xs text-red-600 sm:col-span-2"></p>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm rounded border border-slate-200">取消</button>
+        <button id="saveBtn" class="px-5 py-2 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script>
+    const F = (id) => document.getElementById(id);
+    let TIERS = [];
+
+    async function loadTiers() {
+      try {
+        const r = await fetch('/api/tiers/admin');
+        if (r.ok) {
+          TIERS = (await r.json()).tiers ?? [];
+        } else {
+          // Fallback to public endpoint (no inactive tiers, but enough)
+          const pub = await fetch('/api/tiers').then(r => r.json());
+          TIERS = pub.tiers ?? [];
+        }
+      } catch { TIERS = []; }
+      // Build filter dropdown
+      F('tier').innerHTML = '<option value="">全部等級</option>' +
+        TIERS.map(t => `<option value="${t.code}">${t.nameZh}</option>`).join('');
+    }
+
+    function tierOptionsHtml(currentCode) {
+      if (TIERS.length === 0) return `<option value="${currentCode ?? ''}">${currentCode ?? ''}</option>`;
+      return TIERS.map(t => `<option value="${t.code}" ${t.code===currentCode?'selected':''}>${t.nameZh}</option>`).join('');
+    }
+
+    async function load() {
+      const params = new URLSearchParams();
+      if (F('q').value) params.set('q', F('q').value);
+      if (F('tier').value) params.set('tier', F('tier').value);
+      if (F('status').value) params.set('status', F('status').value);
+      if (F('monthly').checked) params.set('monthly', '1');
+      const { users } = await fetch('/api/customers?' + params).then(r=>r.json());
+      F('rows').innerHTML = (users ?? []).map(u => `
+        <tr class="border-t border-slate-100 ${u.isActive ? '' : 'opacity-50'}">
+          <td class="px-4 py-3">
+            <p class="font-semibold">${u.name ?? '—'}</p>
+            <p class="text-xs text-slate-500">${u.clinicName ?? ''} ${u.taxId ? '· 統編 ' + u.taxId : ''}</p>
+          </td>
+          <td class="px-4 py-3 text-xs text-slate-600">${u.email}</td>
+          <td class="px-4 py-3">
+            <select onchange="update('${u.id}', 'tier', this.value)" class="text-xs px-2 py-1 border border-slate-200 rounded bg-white">
+              ${tierOptionsHtml(u.tier)}
+            </select>
+          </td>
+          <td class="px-4 py-3">
+            <select onchange="update('${u.id}', 'verificationStatus', this.value)" class="text-xs px-2 py-1 border border-slate-200 rounded bg-white">
+              <option value="PENDING"  ${u.verificationStatus==='PENDING'?'selected':''}>審核中</option>
+              <option value="APPROVED" ${u.verificationStatus==='APPROVED'?'selected':''}>已通過</option>
+              <option value="REJECTED" ${u.verificationStatus==='REJECTED'?'selected':''}>未通過</option>
+            </select>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <input type="checkbox" ${u.canMonthlyPay?'checked':''} onchange="update('${u.id}', 'canMonthlyPay', this.checked)"/>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <input type="checkbox" ${u.isActive?'checked':''} onchange="update('${u.id}', 'isActive', this.checked)"/>
+          </td>
+          <td class="px-4 py-3 text-xs text-slate-500">${new Date(u.createdAt).toLocaleDateString('zh-TW')}</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="openEdit('${u.id}')" class="text-xs text-teal-600 hover:underline">編輯</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 text-sm">沒有符合條件的客戶。</td></tr>';
+    }
+
+    window.update = async (id, field, value) => {
+      const r = await fetch('/api/customers/' + id, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!r.ok) alert('更新失敗');
+    };
+
+    // ----- Create / Edit modal -----
+    let EDIT_ID = null;
+    function fillTierSelect(currentCode) {
+      F('fTier').innerHTML = (TIERS.length ? TIERS : [{code:'BRONZE', nameZh:'銅級會員'}]).map(t =>
+        `<option value="${t.code}" ${t.code===currentCode?'selected':''}>${t.nameZh}</option>`).join('');
+    }
+
+    window.openNew = () => {
+      EDIT_ID = null;
+      F('modalTitle').textContent = '新增客戶';
+      F('fPwLabel').textContent = '密碼 (至少 8 字元) *';
+      F('fEmail').disabled = false;
+      F('fEmail').value = ''; F('fPassword').value = '';
+      F('fName').value = ''; F('fPhone').value = '';
+      F('fClinic').value = ''; F('fAddress').value = '';
+      F('fLicense').value = ''; F('fTaxId').value = ''; F('fTitle').value = '';
+      F('fStatus').value = 'APPROVED';
+      F('fMonthly').checked = false; F('fActive').checked = true;
+      F('fErr').textContent = '';
+      fillTierSelect('BRONZE');
+      F('modal').classList.remove('hidden');
+    };
+
+    window.openEdit = async (id) => {
+      const r = await fetch('/api/customers/' + id);
+      if (!r.ok) return alert('讀取失敗');
+      const { user: u } = await r.json();
+      EDIT_ID = id;
+      F('modalTitle').textContent = '編輯客戶：' + (u.clinicName ?? u.name ?? u.email);
+      F('fPwLabel').textContent = '重設密碼 (留空則不變更)';
+      F('fEmail').disabled = true;
+      F('fEmail').value = u.email ?? '';
+      F('fPassword').value = '';
+      F('fName').value = u.name ?? '';
+      F('fPhone').value = u.phone ?? '';
+      F('fClinic').value = u.clinicName ?? '';
+      F('fAddress').value = u.clinicAddress ?? '';
+      F('fLicense').value = u.medicalLicenseNo ?? '';
+      F('fTaxId').value = u.taxId ?? '';
+      F('fTitle').value = u.companyTitle ?? '';
+      F('fStatus').value = u.verificationStatus ?? 'APPROVED';
+      F('fMonthly').checked = !!u.canMonthlyPay;
+      F('fActive').checked = u.isActive !== false;
+      F('fErr').textContent = '';
+      fillTierSelect(u.tier);
+      F('modal').classList.remove('hidden');
+    };
+
+    window.closeModal = () => F('modal').classList.add('hidden');
+
+    F('saveBtn').addEventListener('click', async () => {
+      const body = {
+        email:    F('fEmail').value.trim(),
+        name:     F('fName').value.trim(),
+        phone:    F('fPhone').value.trim(),
+        clinicName:    F('fClinic').value.trim(),
+        clinicAddress: F('fAddress').value.trim(),
+        medicalLicenseNo: F('fLicense').value.trim(),
+        taxId:    F('fTaxId').value.trim(),
+        companyTitle: F('fTitle').value.trim(),
+        tier:     F('fTier').value,
+        verificationStatus: F('fStatus').value,
+        canMonthlyPay: F('fMonthly').checked,
+        isActive: F('fActive').checked,
+      };
+      const pw = F('fPassword').value;
+      if (EDIT_ID && pw) body.password = pw;
+      if (!EDIT_ID) {
+        if (!pw || pw.length < 8) { F('fErr').textContent = '新增客戶需要設定至少 8 字元密碼'; return; }
+        body.password = pw;
+      }
+      if (!body.email || !body.name) { F('fErr').textContent = 'Email 與姓名必填'; return; }
+      const url    = EDIT_ID ? '/api/customers/' + EDIT_ID : '/api/customers';
+      const method = EDIT_ID ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) {
+        const d = await r.json();
+        F('fErr').textContent = d.error === 'email_exists' ? 'Email 已被使用' : '儲存失敗：' + (d.error ?? '');
+        return;
+      }
+      closeModal(); load();
+    });
+
+    ['q','tier','status','monthly'].forEach(id => F(id).addEventListener('input', () => { load(); }));
+    (async () => { await loadTiers(); load(); })();
+  </script>
+</body>
+</html>

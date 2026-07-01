@@ -1,0 +1,633 @@
+/* ---------- Design tokens ---------- */
+:root {
+  /* Brand — slightly desaturated teal for a calmer professional feel */
+  --brand-50:  #effcfb;
+  --brand-100: #cff8f5;
+  --brand-500: #0fb6a9;
+  --brand-600: #0d9488;
+  --brand-700: #0c7570;
+  --brand-900: #134e4a;
+
+  /* Neutral ramp — Slate scale */
+  --ink:        #0f172a;     /* slate-900 */
+  --ink-mid:    #334155;     /* slate-700 */
+  --ink-muted:  #64748b;     /* slate-500 */
+  --ink-soft:   #94a3b8;     /* slate-400 */
+  --line:       #e2e8f0;     /* slate-200 */
+  --line-soft:  #f1f5f9;     /* slate-100 */
+  --surface:    #ffffff;
+  --canvas:     #f8fafc;     /* slate-50 */
+
+  /* Radius scale */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* Shadow — borrowed from Linear / Vercel; subtle, layered */
+  --shadow-card:    0 1px 0 rgba(15,23,42,.04), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-card-hi: 0 1px 0 rgba(15,23,42,.04), 0 8px 24px -8px rgba(15,23,42,.12);
+  --shadow-popover: 0 16px 48px -12px rgba(15,23,42,.18), 0 4px 12px -4px rgba(15,23,42,.08);
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --t-quick: .15s;
+  --t-base: .22s;
+}
+
+.font-display { font-family: 'Playfair Display', serif; }
+body {
+  font-family: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  /* Tabular numerals for prices and ledger numbers — keeps columns aligned */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Button system ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  height: 40px; padding: 0 1rem;
+  border-radius: var(--r-pill); border: 1px solid transparent;
+  font-weight: 600; font-size: .875rem; line-height: 1;
+  transition: background var(--t-quick) var(--ease),
+              color var(--t-quick) var(--ease),
+              border-color var(--t-quick) var(--ease),
+              box-shadow var(--t-quick) var(--ease),
+              transform var(--t-quick) var(--ease);
+  cursor: pointer;
+}
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-100); border-color: var(--brand-500); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-sm { height: 32px; padding: 0 .75rem; font-size: .8125rem; }
+.btn-lg { height: 48px; padding: 0 1.5rem; font-size: 1rem; }
+
+.btn-primary { background: var(--brand-600); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--brand-700); box-shadow: 0 6px 20px -8px rgba(13,148,136,.55); }
+
+.btn-secondary { background: var(--ink); color: #fff; }
+.btn-secondary:hover:not(:disabled) { background: #1e293b; }
+
+.btn-ghost { background: transparent; color: var(--ink-mid); border-color: var(--line); }
+.btn-ghost:hover:not(:disabled) { background: var(--canvas); border-color: var(--ink-soft); color: var(--ink); }
+
+/* ---------- Card primitive ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--t-base) var(--ease),
+              box-shadow var(--t-base) var(--ease),
+              transform var(--t-base) var(--ease);
+}
+.card-hover:hover {
+  border-color: #cbd5e1; /* slate-300 */
+  box-shadow: var(--shadow-card-hi);
+  transform: translateY(-2px);
+}
+
+/* ---------- Modern product card v2 ----------
+   Reference: rounded white outer card → soft grey image panel → bold title +
+   bold price (struck-through + save% pill) → bulk row → full-width black pill CTA.
+   Heart wishlist toggle floats top-right; image-gallery dots sit under media. */
+.pcard {
+  position: relative; display: flex; flex-direction: column;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--t-base) var(--ease),
+              box-shadow var(--t-base) var(--ease),
+              transform var(--t-base) var(--ease);
+}
+.pcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-card-hi); transform: translateY(-2px); }
+
+.pcard__media {
+  position: relative; aspect-ratio: 1/1; overflow: hidden;
+  background: #ffffff;
+  border-radius: var(--r-md);
+}
+.pcard__media img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+  padding: 8%;
+  transition: transform .5s var(--ease);
+}
+.pcard:hover .pcard__media img { transform: scale(1.03); }
+
+/* Legacy image-overlay badges (kept for backward compat) */
+.pcard__badges {
+  position: absolute; top: 12px; left: 12px;
+  display: flex; flex-wrap: wrap; gap: 4px; z-index: 1;
+}
+/* In-body label tags row — replaces the brand pill, sits above the title */
+.pcard__tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 4px;
+}
+/* Wishlist heart floats top-right on the image panel */
+.pcard__wish {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #fff; border: none; cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 8px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.06);
+  color: #cbd5e1; /* outline state */
+  transition: transform var(--t-quick) var(--ease), color var(--t-quick) var(--ease);
+}
+.pcard__wish:hover { transform: scale(1.08); }
+.pcard__wish.is-on { color: #ef4444; }
+.pcard__wish svg { width: 18px; height: 18px; }
+
+/* Image-gallery dot indicators (centered below media) */
+.pcard__dots {
+  display: flex; justify-content: center; gap: 6px;
+  margin: 10px 0 4px;
+}
+.pcard__dots span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #a7f3d0; /* idle */
+}
+.pcard__dots span.is-on { background: var(--brand-600); }
+
+.pcard__body { padding: 4px 4px 0; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+/* "Best Seller" / brand tag pill — green soft */
+.pcard__tag {
+  display: inline-flex; align-items: center;
+  font-size: 12px; font-weight: 700;
+  color: #047857; background: #d1fae5;
+  padding: 4px 12px; border-radius: var(--r-pill);
+  align-self: flex-start;
+}
+
+.pcard__name {
+  font-size: 18px; font-weight: 800; color: var(--ink);
+  line-height: 1.3; min-height: 2.6em;
+  letter-spacing: -.01em; margin-top: 4px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.pcard__name:hover { color: var(--brand-700); }
+
+.pcard__price-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.pcard__price { font-size: 22px; font-weight: 800; color: var(--brand-700); letter-spacing: -.01em; }
+.pcard__strike { font-size: 14px; color: var(--ink-soft); text-decoration: line-through; }
+.pcard__save {
+  font-size: 11px; font-weight: 800; color: #e11d48;
+  padding: 3px 8px; border-radius: var(--r-pill); background: #ffe4e6;
+}
+.pcard__bulk { font-size: 13px; color: var(--brand-700); font-weight: 600; margin-top: 2px; }
+
+/* Full-width black pill CTA */
+.pcard__cta {
+  margin-top: 14px;
+  width: 100%; height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  background: var(--ink); color: #fff;
+  font-weight: 700; font-size: 15px;
+  border-radius: var(--r-pill); border: none; cursor: pointer;
+  transition: background var(--t-quick) var(--ease), transform var(--t-quick) var(--ease);
+}
+.pcard__cta:hover:not(:disabled) { background: #1e293b; }
+.pcard__cta:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Locked-state (anon users) shows muted CTA */
+.pcard__cta--locked { background: #e2e8f0; color: var(--ink-muted); }
+.pcard__cta--locked:hover { background: #cbd5e1; }
+
+/* Smaller qty stepper for verified members (sits left of CTA) */
+.pcard__qty-row { display: flex; gap: 8px; margin-top: 14px; }
+.pcard__qty-row input {
+  width: 56px; height: 48px;
+  border: 1px solid var(--line); border-radius: var(--r-pill);
+  text-align: center; font-weight: 700;
+}
+.pcard__qty-row input:focus-visible { outline: none; border-color: var(--brand-500); box-shadow: 0 0 0 3px var(--brand-100); }
+.pcard__qty-row .pcard__cta { flex: 1; margin-top: 0; }
+
+/* Pill-style label badges (overlay on image) — frosted glass look */
+.pbadge {
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: var(--r-pill);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.pbadge-NEW     { background: rgba(209,250,229,.95); color: #047857; }
+.pbadge-HOT     { background: rgba(255,228,230,.95); color: #be123c; }
+.pbadge-SALE    { background: rgba(254,243,199,.95); color: #b45309; }
+.pbadge-BUNDLE  { background: rgba(237,233,254,.95); color: #6d28d9; }
+.pbadge-GROUP   { background: rgba(221,214,254,.95); color: #5b21b6; }
+.pbadge-MONTHLY { background: rgba(254,226,226,.95); color: #b91c1c; }
+
+/* ---------- Fade-in on grid load ---------- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fade-up { animation: fadeUp .4s var(--ease) both; }
+.fade-up-stagger > * { animation: fadeUp .4s var(--ease) both; }
+.fade-up-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.fade-up-stagger > *:nth-child(2)  { animation-delay: 40ms; }
+.fade-up-stagger > *:nth-child(3)  { animation-delay: 80ms; }
+.fade-up-stagger > *:nth-child(4)  { animation-delay: 120ms; }
+.fade-up-stagger > *:nth-child(5)  { animation-delay: 160ms; }
+.fade-up-stagger > *:nth-child(6)  { animation-delay: 200ms; }
+.fade-up-stagger > *:nth-child(7)  { animation-delay: 240ms; }
+.fade-up-stagger > *:nth-child(8)  { animation-delay: 280ms; }
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .fade-up-stagger > * { animation: none; }
+  .card-hover:hover { transform: none; }
+}
+
+/* ---------- Tighter focus rings sitewide ---------- */
+*:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; border-radius: 2px; }
+button:focus-visible, a:focus-visible { outline: none; }
+
+/* ============================================================
+   HERO — modern, confident, atmospheric
+   ============================================================ */
+.hero { isolation: isolate; }
+.hero > .relative { z-index: 2; } /* ensure copy + CTAs render above .hero__overlay/glow/fade */
+
+/* Overlay 1: diagonal darken (left → right reads better with copy on left) */
+.hero__overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    radial-gradient(120% 80% at 10% 20%, rgba(15,23,42,.88) 0%, rgba(15,23,42,.55) 45%, rgba(15,23,42,.25) 70%, transparent 100%),
+    linear-gradient(180deg, rgba(15,23,42,.4) 0%, rgba(15,23,42,.2) 50%, rgba(15,23,42,.6) 100%);
+}
+/* Overlay 2: brand glow accent — gives ambient depth without being loud */
+.hero__glow {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 78% 32%, rgba(15,182,169,.22), transparent 70%),
+    radial-gradient(36% 24% at 92% 80%, rgba(15,182,169,.18), transparent 70%);
+  mix-blend-mode: screen;
+}
+/* Overlay 3: bottom fade so marquee + callback card sit on a clean edge */
+.hero__bottom-fade {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30%; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(15,23,42,.5) 60%, rgba(15,23,42,.85) 100%);
+}
+
+/* --- Eyebrow with rule --- */
+.hero__eyebrow {
+  display: inline-flex; align-items: center; gap: .85rem;
+  margin-bottom: 1.5rem;
+}
+.hero__rule {
+  display: inline-block; width: 36px; height: 1px;
+  background: linear-gradient(90deg, var(--brand-500), transparent);
+}
+.hero__eyebrow > span:not(.hero__rule) {
+  color: #5eead4; /* teal-300 */
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .22em; text-transform: uppercase;
+}
+
+/* --- Title --- */
+.hero__title { line-height: 1.05; margin: 0; color: #fff; }
+.hero__title-zh {
+  display: block;
+  font-family: 'Noto Serif TC', 'Noto Sans TC', serif;
+  font-weight: 900;
+  letter-spacing: -.01em;
+  font-size: clamp(2.25rem, 5.5vw, 4.5rem); /* ~36px → 72px */
+  text-shadow: 0 2px 24px rgba(0,0,0,.25);
+}
+.hero__title-en {
+  display: block;
+  font-family: 'Playfair Display', 'Noto Serif TC', serif;
+  font-style: italic;
+  font-weight: 400;
+  color: #5eead4;
+  letter-spacing: .01em;
+  font-size: clamp(1.125rem, 2.1vw, 1.75rem); /* ~18px → 28px */
+  margin-top: .6rem;
+  opacity: .92;
+}
+
+/* --- Lede paragraph --- */
+.hero__lede {
+  margin-top: 1.75rem;
+  max-width: 36rem;
+  color: rgba(255,255,255,.88);
+  font-size: clamp(.95rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+}
+
+/* --- CTAs --- */
+.hero__ctas { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2.25rem; }
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 52px; padding: 0 1.75rem;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, var(--brand-500) 0%, var(--brand-600) 100%);
+  color: #fff; font-weight: 700; font-size: .9375rem;
+  box-shadow: 0 10px 30px -10px rgba(15,182,169,.6), inset 0 1px 0 rgba(255,255,255,.18);
+  transition: transform var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease), filter var(--t-quick) var(--ease);
+}
+.btn-hero-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 36px -12px rgba(15,182,169,.7), inset 0 1px 0 rgba(255,255,255,.22); filter: brightness(1.05); }
+.btn-hero-primary:active { transform: translateY(0); }
+.btn-hero-primary svg { transition: transform .25s var(--ease); }
+.btn-hero-primary:hover svg { transform: translateX(3px); }
+
+.btn-hero-ghost {
+  display: inline-flex; align-items: center; gap: .5rem;
+  height: 52px; padding: 0 1.5rem;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,.08);
+  color: #fff; font-weight: 600; font-size: .9375rem;
+  border: 1px solid rgba(255,255,255,.28);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: background var(--t-quick) var(--ease), border-color var(--t-quick) var(--ease);
+}
+.btn-hero-ghost:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.5); }
+
+/* --- Trust badges --- */
+.hero__trust {
+  margin-top: 2.5rem;
+  display: flex; flex-wrap: wrap; gap: 1.25rem 2rem;
+  font-size: .875rem;
+}
+.hero__trust span {
+  display: inline-flex; align-items: center; gap: .5rem;
+  color: rgba(255,255,255,.82);
+}
+.hero__trust i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand-500);
+  box-shadow: 0 0 0 4px rgba(15,182,169,.18);
+}
+.hero__trust b { font-weight: 500; letter-spacing: .01em; }
+
+/* --- Scroll cue --- */
+.hero__cue {
+  position: absolute; left: 50%; bottom: 24px;
+  transform: translateX(-50%); z-index: 2;
+  color: rgba(255,255,255,.55);
+  animation: heroBob 2.4s ease-in-out infinite;
+}
+@keyframes heroBob {
+  0%, 100% { transform: translate(-50%, 0); opacity: .55; }
+  50%      { transform: translate(-50%, 6px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__cue { animation: none; }
+  .btn-hero-primary:hover { transform: none; }
+}
+
+/* --- Refined callback card that sits on top of the hero/marquee --- */
+.callback-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-popover);
+}
+.callback-card__eyebrow {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: var(--brand-600);
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.callback-card__eyebrow::before {
+  content: ''; width: 18px; height: 1px; background: var(--brand-500);
+}
+.callback-card__sub { font-size: .8125rem; color: var(--ink-muted); margin-top: 4px; }
+.callback-card__form { display: flex; gap: 6px; margin-top: 14px; }
+.callback-card__form input {
+  flex: 1; height: 44px; padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: .9375rem; background: var(--surface);
+  transition: border-color var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease);
+}
+.callback-card__form input:focus {
+  outline: none; border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--brand-100);
+}
+.callback-card__form button {
+  height: 44px; padding: 0 18px;
+  border: none; cursor: pointer;
+  border-radius: var(--r-sm);
+  background: var(--ink); color: #fff;
+  font-weight: 700; font-size: 1rem;
+  transition: background var(--t-quick) var(--ease), transform var(--t-quick) var(--ease);
+}
+.callback-card__form button:hover { background: #1e293b; transform: translateX(2px); }
+
+/* ============================================================
+   ADMIN CHROME — opt-in via <body class="admin">
+   Targets the existing Tailwind class patterns so we upgrade
+   25+ admin pages without touching their markup.
+   ============================================================ */
+
+body.admin {
+  background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 240px) no-repeat var(--canvas);
+  color: var(--ink);
+}
+
+/* --- Admin header: refined dark bar with subtle accent --- */
+body.admin > header.bg-slate-900 {
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+  box-shadow: none;
+  border-bottom: 1px solid rgba(15,23,42,.6);
+  position: sticky; top: 0; z-index: 40;
+}
+body.admin > header.bg-slate-900::after {
+  /* hairline brand accent under the dark header */
+  content: ''; display: block; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--brand-500) 30%, var(--brand-500) 70%, transparent 100%);
+  opacity: .35;
+}
+body.admin > header a[href="/admin.html"] span {
+  font-weight: 700; letter-spacing: .04em; font-size: 14px;
+}
+body.admin > header #adminNav a {
+  position: relative; padding: 6px 0;
+  color: rgba(255,255,255,.78);
+  font-weight: 500; letter-spacing: .01em;
+  transition: color var(--t-quick) var(--ease);
+}
+body.admin > header #adminNav a:hover { color: #fff; }
+
+/* --- Page hero (h1 + sub) --- */
+body.admin main h1 {
+  font-weight: 800; letter-spacing: -.02em; font-size: 1.625rem;
+  color: var(--ink);
+}
+body.admin main h1 + p {
+  font-size: .8125rem; color: var(--ink-muted); margin-top: .25rem;
+}
+
+/* --- Section cards (the white panels) --- */
+body.admin .bg-white.rounded-2xl.shadow-sm,
+body.admin .bg-white.rounded-xl.shadow-sm {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--r-md);
+}
+
+/* --- Tables --- */
+body.admin table { border-collapse: separate; border-spacing: 0; }
+body.admin table thead.bg-slate-50 {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+body.admin table thead th {
+  font-weight: 600; font-size: 11px; letter-spacing: .06em;
+  color: var(--ink-muted); text-transform: uppercase;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+  /* Note: sticky removed — admin tables sit inside `overflow-x-auto`
+     containers which create their own scroll context, so `top: 64px`
+     pushed the thead 64px DOWN into the first body row. */
+}
+body.admin table tbody td {
+  padding: 14px 16px; border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+body.admin table tbody tr {
+  transition: background var(--t-quick) var(--ease);
+}
+body.admin table tbody tr:hover { background: #fafbfd; }
+body.admin table tbody tr:last-child td { border-bottom: none; }
+
+/* --- Form controls --- */
+body.admin input[type="text"],
+body.admin input[type="email"],
+body.admin input[type="tel"],
+body.admin input[type="url"],
+body.admin input[type="number"],
+body.admin input[type="password"],
+body.admin input[type="search"],
+body.admin input[type="date"],
+body.admin input[type="datetime-local"],
+body.admin select,
+body.admin textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  transition: border-color var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease);
+  font-size: .875rem;
+}
+body.admin input:hover:not(:disabled),
+body.admin select:hover:not(:disabled),
+body.admin textarea:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+body.admin input:focus,
+body.admin select:focus,
+body.admin textarea:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--brand-100);
+}
+
+/* Checkbox accent */
+body.admin input[type="checkbox"],
+body.admin input[type="radio"] {
+  accent-color: var(--brand-600);
+  width: 16px; height: 16px; cursor: pointer;
+}
+
+/* --- Buttons: auto-upgrade the common admin button patterns --- */
+body.admin button.bg-teal-600,
+body.admin a.bg-teal-600,
+body.admin .bg-teal-600.text-white {
+  background: var(--brand-600);
+  border-radius: var(--r-sm);
+  transition: background var(--t-quick) var(--ease),
+              box-shadow var(--t-quick) var(--ease),
+              transform var(--t-quick) var(--ease);
+  font-weight: 600; letter-spacing: .01em;
+}
+body.admin button.bg-teal-600:hover:not(:disabled),
+body.admin a.bg-teal-600:hover {
+  background: var(--brand-700);
+  box-shadow: 0 6px 16px -6px rgba(13,148,136,.4);
+}
+body.admin button.bg-slate-900,
+body.admin a.bg-slate-900,
+body.admin .bg-slate-900.text-white {
+  background: var(--ink);
+  border-radius: var(--r-sm);
+  font-weight: 600;
+}
+body.admin button.bg-slate-900:hover,
+body.admin a.bg-slate-900:hover { background: #1e293b; }
+
+/* Tertiary / ghost-y buttons (border + slate text) */
+body.admin button.border.border-slate-200 {
+  background: var(--surface);
+  transition: border-color var(--t-quick) var(--ease), background var(--t-quick) var(--ease);
+}
+body.admin button.border.border-slate-200:hover {
+  border-color: var(--ink-soft);
+  background: var(--canvas);
+}
+
+/* --- Status pills (the common .bg-X-100.text-X-700 pattern) --- */
+body.admin .px-2.py-0\.5.rounded,
+body.admin .px-2.rounded {
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-weight: 600; letter-spacing: .02em;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+/* Optional status dot — add by placing <span class="dot"></span> inside */
+body.admin .pill-dot::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: .8;
+  display: inline-block; margin-right: 6px;
+}
+
+/* --- Empty/loading text --- */
+body.admin .text-slate-400 { color: var(--ink-soft); }
+
+/* --- Modal panels (the .bg-black/50 overlays) --- */
+body.admin .fixed.inset-0.bg-black\/50 > .bg-white {
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-popover);
+  border: 1px solid var(--line);
+}
+body.admin .fixed.inset-0.bg-black\/50 {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Tier pill */
+.tier-pill { display:inline-flex; align-items:center; gap:.35rem; font-size:.7rem; font-weight:700; padding:.25rem .6rem; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; }
+.tier-bronze { background:#fef3c7; color:#92400e; }
+.tier-gold   { background:#fde68a; color:#78350f; }
+
+/* Locked price */
+.price-locked { color:#94a3b8; font-style:italic; }
+
+/* ---------- Mobile touch polish ---------- */
+
+a[href]:active,
+button:active:not(:disabled) {
+  transform: scale(0.985);
+  transition: transform .08s ease-out;
+}
+
+a, button, [role="button"] { touch-action: manipulation; }
+a, button { -webkit-tap-highlight-color: transparent; }
+
+/* ---------- Product image lightbox ---------- */
+.lightbox {
+  position: fixed; inset: 0; background: rgba(0,0,0,.92);
+  display: grid; place-items: center; z-index: 100;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.lightbox img { max-width: 96vw; max-height: 92vh; object-fit: contain; }
+.lightbox button.lb-close {
+  position: absolute; top: calc(env(safe-area-inset-top) + .75rem); right: 1rem;
+  background: rgba(255,255,255,.15); color: #fff;
+  width: 44px; height: 44px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 1.5rem; line-height: 1; border: none;
+}
+
+/* ---------- Empty-state illustration ---------- */
+.empty-state {
+  text-align: center; padding: 2.5rem 1rem; color: #64748b;
+}
+.empty-state svg { width: 88px; height: 88px; margin: 0 auto .75rem; opacity: .55; }

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>登入 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-teal-50 via-white to-slate-50 grid place-items-center px-4 py-10">
+  <div class="w-full max-w-md card p-8">
+    <a href="/" class="block mb-8">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-10 w-auto"/>
+    </a>
+    <h1 class="text-2xl font-black mb-1" data-content="login.title">會員登入</h1>
+    <p class="text-slate-500 text-sm mb-6" data-content="login.subtitle">登入後解鎖完整商品價格</p>
+    <div id="pendingBanner" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+      您的帳號正在審核中，通過後才能登入。如有疑問請聯絡業務專員。
+    </div>
+    <script>
+      if (new URLSearchParams(location.search).get('pending') === '1') {
+        document.getElementById('pendingBanner').classList.remove('hidden');
+      }
+    </script>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold text-slate-600">電子郵件</label>
+        <input name="email" type="email" autocomplete="email" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-600">密碼</label>
+          <button type="button" onclick="openForgot()" class="text-xs text-teal-600 hover:underline">忘記密碼？</button>
+        </div>
+        <input name="password" type="password" autocomplete="current-password" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <button class="btn btn-secondary w-full" data-content="login.cta">登入</button>
+      <p id="error" class="text-red-600 text-sm hidden"></p>
+    </form>
+
+    <div class="my-6 flex items-center gap-3 text-xs text-slate-400">
+      <span class="flex-1 h-px bg-slate-200"></span>或使用第三方登入<span class="flex-1 h-px bg-slate-200"></span>
+    </div>
+
+    <div class="space-y-2.5">
+      <a href="/api/auth/google/start"
+         class="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 py-3 rounded-lg font-semibold transition">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.61z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        <span>使用 Google 登入</span>
+      </a>
+
+      <a href="/api/auth/line/start"
+         class="w-full flex items-center justify-center gap-3 bg-[#06C755] hover:bg-[#05b34d] text-white py-3 rounded-lg font-semibold transition">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.346 0-.627-.285-.627-.629V8.108c0-.345.281-.63.63-.63h2.383c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.135-.033.196-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+        <span data-content="login.lineCta">使用 LINE 登入</span>
+      </a>
+    </div>
+
+    <p class="text-center text-sm text-slate-500 mt-6">
+      還沒有帳號？ <a href="/register.html" class="text-teal-600 font-semibold">立即註冊</a>
+    </p>
+  </div>
+
+  <div id="forgotModal" class="hidden fixed inset-0 z-50 grid place-items-center p-4" style="background:rgba(15,23,42,.55);backdrop-filter:blur(4px);">
+    <div class="card w-full max-w-md p-7">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-xl font-black" id="forgotTitle">重設密碼</h2>
+        <button onclick="closeForgot()" aria-label="關閉" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
+      </div>
+      <p class="text-sm text-slate-500 mb-5" id="forgotSubtitle">輸入註冊 Email，我們會寄出 6 位數驗證碼。</p>
+
+      <form id="forgotStep1" class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">電子郵件</label>
+          <input id="fpEmail" type="email" autocomplete="email" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+        </div>
+        <button class="btn btn-primary w-full">寄送驗證碼</button>
+      </form>
+
+      <form id="forgotStep2" class="space-y-3 hidden">
+        <p class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          若該 Email 已註冊，驗證碼已寄出。請至信箱查收 (15 分鐘內有效)。
+        </p>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">6 位數驗證碼</label>
+          <input id="fpOtp" inputmode="numeric" pattern="\d{6}" maxlength="6" required
+                 class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg text-center tracking-[.4em] text-lg font-mono focus:outline-none focus:border-teal-500"/>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">新密碼 (至少 8 字元)</label>
+          <input id="fpNewPw" type="password" autocomplete="new-password" minlength="8" required
+                 class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="goBackStep1()" class="btn btn-ghost flex-1">返回</button>
+          <button class="btn btn-primary flex-1">設定新密碼</button>
+        </div>
+      </form>
+
+      <p id="fpMsg" class="text-sm mt-3 hidden"></p>
+    </div>
+  </div>
+
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(Object.fromEntries(fd)),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const err = document.getElementById('error');
+        err.textContent = data.error === 'invalid_credentials' ? '帳號或密碼錯誤'
+                         : data.error === 'account_disabled'   ? '帳號已停用，請聯絡管理員'
+                         : '登入失敗';
+        err.classList.remove('hidden');
+        return;
+      }
+      const u = data.user;
+      const isStaff = u.isSuperAdmin || u.staffRoleId
+        || ['STAFF', 'MANAGER', 'SALES', 'FINANCE', 'WAREHOUSE'].includes(u.role);
+      const next = new URLSearchParams(location.search).get('next');
+      window.location.href = next
+        ? next
+        : isStaff ? '/admin.html'
+        : u.verificationStatus === 'APPROVED' ? '/shop.html' : '/account.html';
+    });
+
+    const fp = (id) => document.getElementById(id);
+    window.openForgot = () => {
+      fp('forgotModal').classList.remove('hidden');
+      fp('forgotStep1').classList.remove('hidden');
+      fp('forgotStep2').classList.add('hidden');
+      fp('fpMsg').classList.add('hidden');
+      setTimeout(() => fp('fpEmail').focus(), 50);
+    };
+    window.closeForgot = () => fp('forgotModal').classList.add('hidden');
+    window.goBackStep1 = () => {
+      fp('forgotStep1').classList.remove('hidden');
+      fp('forgotStep2').classList.add('hidden');
+      fp('fpMsg').classList.add('hidden');
+    };
+
+    fp('forgotStep1').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = fp('fpEmail').value.trim();
+      if (!email) return;
+      const btn = e.target.querySelector('button');
+      btn.disabled = true; btn.textContent = '寄送中…';
+      await fetch('/api/auth/password/forgot', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email }),
+      });
+      btn.disabled = false; btn.textContent = '寄送驗證碼';
+      fp('forgotStep1').classList.add('hidden');
+      fp('forgotStep2').classList.remove('hidden');
+      fp('forgotTitle').textContent = '輸入驗證碼';
+      fp('forgotSubtitle').textContent = '已寄至 ' + email + '，請填入驗證碼並設定新密碼。';
+      setTimeout(() => fp('fpOtp').focus(), 50);
+    });
+
+    fp('forgotStep2').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = fp('fpEmail').value.trim();
+      const otp = fp('fpOtp').value.trim();
+      const newPassword = fp('fpNewPw').value;
+      const msg = fp('fpMsg');
+      const btn = e.target.querySelector('button:not([type="button"])');
+      btn.disabled = true; btn.textContent = '處理中…';
+      const r = await fetch('/api/auth/password/reset', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
+      btn.disabled = false; btn.textContent = '設定新密碼';
+      const d = await r.json().catch(() => ({}));
+      msg.classList.remove('hidden');
+      if (r.ok) {
+        msg.className = 'text-sm mt-3 text-emerald-700';
+        msg.textContent = '密碼已重設。即將返回登入…';
+        setTimeout(() => {
+          closeForgot();
+          document.querySelector('input[name="email"]').value = email;
+          document.querySelector('input[name="password"]').focus();
+        }, 1400);
+      } else {
+        msg.className = 'text-sm mt-3 text-rose-600';
+        msg.textContent = d.error === 'too_many_attempts' ? '錯誤次數過多，請重新申請驗證碼。'
+                        : d.error === 'invalid_or_expired' ? '驗證碼錯誤或已過期。'
+                        : '重設失敗，請稍後再試。';
+      }
+    });
+  </script>
+
+  <footer class="bg-white py-6 mt-8 w-full text-center">
+    <p class="text-xs text-slate-500" data-content="footer.copyright">© 2026 資生國際有限公司 Shisei International Limited. 統一編號: 28343724</p>
+  </footer>
+</body>
+</html>

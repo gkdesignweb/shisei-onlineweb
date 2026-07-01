@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>頁面與選單 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="/css/prose.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0"><img data-content="admin.logo.url" data-content-attr="src" alt="Logo" class="h-8 w-auto hidden"/><span class="font-bold tracking-wide">管理後台</span></a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-10">
+
+    <!-- Pages -->
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">頁面</h1>
+          <p class="text-sm text-slate-500 mt-1">建立 /p/<i>slug</i> 形式的靜態頁面（關於我們、隱私政策、聯絡資訊等）。內文支援 HTML。</p>
+        </div>
+        <button onclick="openPageNew()" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增頁面</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="px-5 py-3 text-left">標題</th>
+              <th class="px-5 py-3 text-left">Slug</th>
+              <th class="px-5 py-3 text-left">狀態</th>
+              <th class="px-5 py-3 text-left">最後更新</th>
+              <th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="pageRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Main nav -->
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">頁面主選單</h1>
+          <p class="text-sm text-slate-500 mt-1">前台每個頁面頂部的導覽列項目；href 可填 /p/slug、靜態頁路徑 (/shop.html)、錨點 (#categories) 或外部 URL。</p>
+        </div>
+        <button onclick="openNavNew('MAIN')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增頁面主選單項目</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+            <tr><th class="px-5 py-3 text-left">排序</th><th class="px-5 py-3 text-left">名稱</th><th class="px-5 py-3 text-left">連結</th><th class="px-5 py-3 text-left">啟用</th><th class="px-5 py-3"></th></tr>
+          </thead>
+          <tbody id="navRowsMAIN"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer nav -->
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">頁面頁尾</h1>
+          <p class="text-sm text-slate-500 mt-1">顯示於每個頁面底部 Footer 的連結（例如「客戶服務 / 政策與條款」欄位下方）。可加入頁面、錨點或外部 URL，順序可獨立調整。</p>
+        </div>
+        <button onclick="openNavNew('FOOTER')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增頁面頁尾項目</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+            <tr><th class="px-5 py-3 text-left">排序</th><th class="px-5 py-3 text-left">名稱</th><th class="px-5 py-3 text-left">連結</th><th class="px-5 py-3 text-left">啟用</th><th class="px-5 py-3"></th></tr>
+          </thead>
+          <tbody id="navRowsFOOTER"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Shop nav -->
+    <section>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-black">網購主選單</h1>
+          <p class="text-sm text-slate-500 mt-1">顯示於 /shop.html 商品頁頂部的次級選單。可獨立排序，與「頁面主選單」互不影響。</p>
+        </div>
+        <button onclick="openNavNew('SHOP')" class="bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">+ 新增網購主選單項目</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wider">
+            <tr><th class="px-5 py-3 text-left">排序</th><th class="px-5 py-3 text-left">名稱</th><th class="px-5 py-3 text-left">連結</th><th class="px-5 py-3 text-left">啟用</th><th class="px-5 py-3"></th></tr>
+          </thead>
+          <tbody id="navRowsSHOP"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Page modal -->
+  <div id="pageModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <h3 id="pageModalTitle" class="font-bold text-lg mb-4">新增頁面</h3>
+      <div class="grid sm:grid-cols-2 gap-4 text-sm">
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">標題 *</label>
+          <input id="pgTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">Slug (URL) — 空白自動生成</label>
+          <input id="pgSlug" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono"/></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">Meta title (SEO; 留空則用標題 · 網站名稱)</label>
+          <input id="pgMetaTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div class="sm:col-span-2"><label class="text-xs text-slate-500">Meta description (SEO)</label>
+          <input id="pgMeta" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">OG Title (社群分享)</label>
+          <input id="pgOgTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div>
+          <label class="text-xs text-slate-500">OG Image URL</label>
+          <div class="flex gap-2 mt-1">
+            <input id="pgOgImage" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"/>
+            <button type="button" onclick="pickOgImage()" class="text-xs bg-slate-900 text-white px-3 rounded">媒體庫</button>
+          </div>
+        </div>
+        <div class="sm:col-span-2">
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-2 border-b border-slate-200">
+            <div class="flex">
+              <button type="button" id="pgTabBlocks" onclick="switchTab('blocks')" class="px-4 py-2 text-sm font-semibold border-b-2 border-teal-600 text-teal-600">🧱 區塊編輯器</button>
+              <button type="button" id="pgTabHtml"   onclick="switchTab('html')"   class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">📝 HTML (進階)</button>
+            </div>
+            <button type="button" id="pgOpenLive" onclick="openLivePreview()" class="text-xs text-teal-600 hover:underline hidden">在新分頁開啟 ↗</button>
+          </div>
+
+          <div id="pgPaneBlocks">
+            <p class="text-xs text-slate-500 mb-2">用區塊堆疊頁面：Hero 主視覺、文字、圖片、商品列表、橫幅、行動呼籲、FAQ、自訂 HTML。可上下排序、即時編輯。</p>
+            <div id="blockEditor"></div>
+          </div>
+
+          <div id="pgPaneHtml" class="hidden">
+            <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+              <label class="text-xs text-slate-500">純 HTML 內文 (只在沒有區塊時使用)</label>
+              <div class="flex items-center gap-3 text-xs">
+                <button type="button" onclick="insertImage()" class="text-teal-600 hover:underline">+ 插入圖片</button>
+                <label class="flex items-center gap-1"><input id="pgPreviewToggle" type="checkbox"/> 即時預覽</label>
+              </div>
+            </div>
+            <textarea id="pgBody" rows="14" class="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs leading-relaxed"></textarea>
+            <div id="pgPreview" class="hidden mt-3 p-4 border border-slate-200 rounded-lg bg-white prose"></div>
+            <p class="text-[11px] text-slate-400 mt-1">提示：當「區塊編輯器」有任何區塊時，此處 HTML 不會顯示在前台。建議優先用區塊。</p>
+          </div>
+        </div>
+        <div class="sm:col-span-2 grid sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <div>
+            <label class="text-xs text-slate-500">頂部橫幅 (Head Banner)</label>
+            <select id="pgHeadBanner" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+              <option value="">— 無 —</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">底部橫幅 (Foot Banner)</label>
+            <select id="pgFootBanner" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+              <option value="">— 無 —</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-slate-400 sm:col-span-2">在 <a href="/admin-page-banners.html" class="text-teal-600 underline">頁面橫幅</a> 管理中建立的橫幅，這裡即可指派給每個頁面。</p>
+        </div>
+
+        <!-- Header / Footer template pickers -->
+        <div class="sm:col-span-2 grid sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <div>
+            <label class="text-xs text-slate-500">Header 模板</label>
+            <select id="pgHeaderTpl" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+              <option value="">— 使用預設 —</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Footer 模板</label>
+            <select id="pgFooterTpl" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
+              <option value="">— 使用預設 —</option>
+            </select>
+          </div>
+          <p class="text-[11px] text-slate-400 sm:col-span-2">在 <a href="/admin-page-templates.html" class="text-teal-600 underline">Header / Footer 模板</a> 建立後可在這裡選用。留空即沿用平台預設。</p>
+        </div>
+
+        <!-- Per-page direct banner upload -->
+        <div class="sm:col-span-2 grid sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <label class="flex items-center gap-2 sm:col-span-2">
+            <input id="pgBannerEnabled" type="checkbox"/>
+            <span>啟用本頁專屬橫幅 (直接上傳圖片，獨立於上方下拉選單)</span>
+          </label>
+          <div class="sm:col-span-2">
+            <label class="text-xs text-slate-500">橫幅圖片</label>
+            <div class="flex gap-2 mt-1">
+              <input id="pgBannerImage" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"/>
+              <button type="button" onclick="pickBannerImage()" class="text-xs bg-slate-900 text-white px-3 rounded">媒體庫</button>
+            </div>
+            <img id="pgBannerPreview" class="mt-2 max-h-32 rounded border border-slate-200 hidden"/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-xs text-slate-500">橫幅點擊連結 (可選)</label>
+            <input id="pgBannerLink" placeholder="/shop.html 或 https://…" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"/>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 sm:col-span-2 flex-wrap">
+          <label class="flex items-center gap-2"><input id="pgPublished" type="checkbox" checked/> <span>發佈</span></label>
+          <label class="flex items-center gap-2"><input id="pgAddNav" type="checkbox"/> <span>加入頁面主選單</span></label>
+          <label class="flex items-center gap-2"><input id="pgAddFooter" type="checkbox"/> <span>加入頁面頁尾</span></label>
+          <label class="flex items-center gap-2"><input id="pgAddShopNav" type="checkbox"/> <span>加入網購主選單</span></label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closePageModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="pageSaveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav modal -->
+  <div id="navModal" class="hidden fixed inset-0 bg-black/50 z-50 grid place-items-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h3 id="navModalTitle" class="font-bold mb-4">新增選單項目</h3>
+      <div class="space-y-3 text-sm">
+        <div><label class="text-xs text-slate-500">顯示名稱 *</label>
+          <input id="nvLabel" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="text-xs text-slate-500">連結 href *</label>
+          <input id="nvHref" placeholder="/p/about, /shop.html, #categories" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"/></div>
+        <div><label class="text-xs text-slate-500">排序</label>
+          <input id="nvOrder" type="number" value="100" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/></div>
+        <div><label class="flex items-center gap-2"><input id="nvActive" type="checkbox" checked/> 啟用</label></div>
+        <div class="pt-2 border-t border-slate-100">
+          <label class="text-xs text-slate-500">顯示位置</label>
+          <select id="nvLocation" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm">
+            <option value="MAIN">頁面主選單</option>
+            <option value="FOOTER">頁面頁尾</option>
+            <option value="SHOP">網購主選單</option>
+          </select>
+        </div>
+        <div id="nvFooterColRow" class="hidden">
+          <label class="text-xs text-slate-500">頁尾分欄（僅頁面頁尾位置時生效）</label>
+          <select id="nvFooterCol" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-sm">
+            <option value="SERVICE">客戶服務</option>
+            <option value="POLICY">政策與條款</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeNavModal()" class="px-3 py-1.5 text-sm rounded border border-slate-200">取消</button>
+        <button id="navSaveBtn" class="px-3 py-1.5 text-sm rounded bg-teal-600 text-white">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script src="/js/block-schemas.js"></script>
+  <script src="/js/block-editor.js"></script>
+  <script>
+    let EDIT_PAGE = null, EDIT_NAV = null, BANNERS = [], BLOCK_EDITOR = null;
+    let NAV_BY_LOCATION = { MAIN: [], FOOTER: [], SHOP: [] };
+    let TEMPLATES = { HEADER: [], FOOTER: [] };
+    window.switchTab = (which) => {
+      F('pgTabBlocks').classList.toggle('border-teal-600', which === 'blocks');
+      F('pgTabBlocks').classList.toggle('text-teal-600',   which === 'blocks');
+      F('pgTabBlocks').classList.toggle('text-slate-500',  which !== 'blocks');
+      F('pgTabBlocks').classList.toggle('border-transparent', which !== 'blocks');
+      F('pgTabHtml').classList.toggle('border-teal-600', which === 'html');
+      F('pgTabHtml').classList.toggle('text-teal-600',   which === 'html');
+      F('pgTabHtml').classList.toggle('text-slate-500',  which !== 'html');
+      F('pgTabHtml').classList.toggle('border-transparent', which !== 'html');
+      F('pgPaneBlocks').classList.toggle('hidden', which !== 'blocks');
+      F('pgPaneHtml').classList.toggle('hidden',   which !== 'html');
+    };
+    const F = (id) => document.getElementById(id);
+    const BASE_PAGES   = '/api/admin/pages-mgmt/pages';
+    const BASE_NAV     = '/api/admin/pages-mgmt/nav';
+    const BASE_BANNERS = '/api/banners/admin?placement=PAGE';
+
+    async function loadBanners() {
+      try {
+        const r = await fetch(BASE_BANNERS);
+        if (!r.ok) { BANNERS = []; return; }
+        const d = await r.json();
+        BANNERS = d.banners ?? [];
+      } catch { BANNERS = []; }
+      const opts = '<option value="">— 無 —</option>' + BANNERS.map(b => {
+        const label = b.name?.trim() || b.imageUrl.split('/').pop() || b.id;
+        return `<option value="${b.id}">${label}${b.isActive?'':' (停用)'}</option>`;
+      }).join('');
+      F('pgHeadBanner').innerHTML = opts;
+      F('pgFootBanner').innerHTML = opts;
+    }
+
+    async function loadTemplates() {
+      try {
+        const [hd, ft] = await Promise.all([
+          fetch('/api/admin/pages-mgmt/templates?type=HEADER').then(r=>r.json()),
+          fetch('/api/admin/pages-mgmt/templates?type=FOOTER').then(r=>r.json()),
+        ]);
+        TEMPLATES = { HEADER: hd.templates || [], FOOTER: ft.templates || [] };
+      } catch { TEMPLATES = { HEADER: [], FOOTER: [] }; }
+      const opt = (list) => '<option value="">— 使用預設 —</option>' +
+        list.map(t => `<option value="${t.id}">${t.name}${t.isDefault?' (預設)':''}</option>`).join('');
+      F('pgHeaderTpl').innerHTML = opt(TEMPLATES.HEADER);
+      F('pgFooterTpl').innerHTML = opt(TEMPLATES.FOOTER);
+    }
+
+    window.pickBannerImage = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      F('pgBannerImage').value = url;
+      F('pgBannerPreview').src = url;
+      F('pgBannerPreview').classList.remove('hidden');
+    };
+
+    function renderNavRows(items) {
+      return items.map(it => `
+        <tr class="border-t border-slate-100">
+          <td class="px-5 py-3">${it.order}</td>
+          <td class="px-5 py-3 font-semibold">${it.label}</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">${it.href}</td>
+          <td class="px-5 py-3">${it.isActive?'✓':'✗'}</td>
+          <td class="px-5 py-3 text-right space-x-3">
+            <button onclick='editNav(${JSON.stringify(it)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="delNav('${it.id}')" class="text-red-600 text-xs">刪除</button>
+          </td>
+        </tr>`).join('') || '<tr><td class="px-5 py-6 text-slate-500 text-center text-sm" colspan="5">尚無項目。</td></tr>';
+    }
+
+    async function load() {
+      const [p, nMain, nFooter, nShop] = await Promise.all([
+        fetch(BASE_PAGES).then(r=>r.json()),
+        fetch(BASE_NAV + '?location=MAIN').then(r=>r.json()),
+        fetch(BASE_NAV + '?location=FOOTER').then(r=>r.json()),
+        fetch(BASE_NAV + '?location=SHOP').then(r=>r.json()),
+        loadBanners(),
+        loadTemplates(),
+      ]);
+      F('pageRows').innerHTML = p.pages.map(pg => `
+        <tr class="border-t border-slate-100">
+          <td class="px-5 py-3 font-semibold"><a href="/p/${pg.slug}" target="_blank" class="hover:text-teal-600">${pg.title} ↗</a></td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">/p/${pg.slug}</td>
+          <td class="px-5 py-3">
+            <span class="text-xs px-2 py-0.5 rounded ${pg.isPublished?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${pg.isPublished?'已發佈':'草稿'}</span>
+          </td>
+          <td class="px-5 py-3 text-xs text-slate-500">${new Date(pg.updatedAt).toLocaleString('zh-TW')}</td>
+          <td class="px-5 py-3 text-right space-x-3">
+            <button onclick='editPage(${JSON.stringify(pg)})' class="text-teal-600 text-xs">編輯</button>
+            <button onclick="delPage('${pg.id}')" class="text-red-600 text-xs">刪除</button>
+          </td>
+        </tr>`).join('') || '<tr><td class="px-5 py-6 text-slate-500 text-center text-sm" colspan="5">尚無頁面。</td></tr>';
+
+      NAV_BY_LOCATION = { MAIN: nMain.items, FOOTER: nFooter.items, SHOP: nShop.items };
+      F('navRowsMAIN').innerHTML   = renderNavRows(nMain.items);
+      F('navRowsFOOTER').innerHTML = renderNavRows(nFooter.items);
+      F('navRowsSHOP').innerHTML   = renderNavRows(nShop.items);
+    }
+
+    function isLinkedFrom(slug, location) {
+      if (!slug) return false;
+      const href = '/p/' + slug;
+      return (NAV_BY_LOCATION[location] || []).some((it) => it.href === href);
+    }
+
+    // Page modal
+    window.openPageNew = async () => {
+      EDIT_PAGE = null; fillPage({});
+      F('pageModalTitle').textContent='新增頁面';
+      F('pageModal').classList.remove('hidden');
+      switchTab('blocks');
+      ensureBlockEditor(); BLOCK_EDITOR.setBlocks([]);
+    };
+    window.editPage = async (p) => {
+      EDIT_PAGE = p.id; fillPage(p);
+      F('pageModalTitle').textContent='編輯頁面';
+      F('pageModal').classList.remove('hidden');
+      ensureBlockEditor();
+      try {
+        const r = await fetch(BASE_PAGES + '/' + p.id + '/blocks');
+        const d = r.ok ? await r.json() : { blocks: [] };
+        BLOCK_EDITOR.setBlocks(d.blocks ?? []);
+        switchTab((d.blocks ?? []).length === 0 && (p.body ?? '').trim() ? 'html' : 'blocks');
+      } catch { BLOCK_EDITOR.setBlocks([]); switchTab('blocks'); }
+    };
+    window.closePageModal = () => F('pageModal').classList.add('hidden');
+    function ensureBlockEditor() {
+      if (!BLOCK_EDITOR) BLOCK_EDITOR = window.createBlockEditor(F('blockEditor'));
+    }
+    function fillPage(p) {
+      F('pgTitle').value = p.title ?? '';
+      F('pgSlug').value = p.slug ?? '';
+      F('pgMetaTitle').value = p.metaTitle ?? '';
+      F('pgMeta').value = p.metaDesc ?? '';
+      F('pgOgTitle').value = p.ogTitle ?? '';
+      F('pgOgImage').value = p.ogImage ?? '';
+      F('pgBody').value = p.body ?? '';
+      F('pgPublished').checked = p.isPublished ?? true;
+      F('pgHeadBanner').value = p.headBannerId ?? '';
+      F('pgFootBanner').value = p.footBannerId ?? '';
+      F('pgHeaderTpl').value = p.headerTemplateId ?? '';
+      F('pgFooterTpl').value = p.footerTemplateId ?? '';
+      F('pgBannerEnabled').checked = !!p.bannerEnabled;
+      F('pgBannerImage').value = p.bannerImageUrl ?? '';
+      F('pgBannerLink').value = p.bannerLinkUrl ?? '';
+      const prev = F('pgBannerPreview');
+      if (p.bannerImageUrl) { prev.src = p.bannerImageUrl; prev.classList.remove('hidden'); }
+      else { prev.classList.add('hidden'); prev.removeAttribute('src'); }
+      // Boxes reflect current membership — ticking adds, unticking removes.
+      F('pgAddNav').checked     = isLinkedFrom(p.slug, 'MAIN');
+      F('pgAddFooter').checked  = isLinkedFrom(p.slug, 'FOOTER');
+      F('pgAddShopNav').checked = isLinkedFrom(p.slug, 'SHOP');
+      F('pgPreviewToggle').checked = false;
+      F('pgPreview').classList.add('hidden');
+      // "Open in new tab" only available after the page is saved (has a slug)
+      F('pgOpenLive').classList.toggle('hidden', !p.slug);
+      F('pgOpenLive').dataset.slug = p.slug ?? '';
+    }
+
+    window.openLivePreview = () => {
+      const slug = F('pgOpenLive').dataset.slug;
+      if (slug) window.open('/p/' + encodeURIComponent(slug), '_blank');
+    };
+
+    window.pickOgImage = async () => {
+      const url = await window.openMediaPicker();
+      if (url) F('pgOgImage').value = url;
+    };
+
+    F('pgPreviewToggle').addEventListener('change', (e) => {
+      const pv = F('pgPreview');
+      pv.classList.toggle('hidden', !e.target.checked);
+      if (e.target.checked) pv.innerHTML = F('pgBody').value;
+    });
+    F('pgBody').addEventListener('input', () => {
+      if (F('pgPreviewToggle').checked) F('pgPreview').innerHTML = F('pgBody').value;
+    });
+
+    window.insertImage = async () => {
+      const url = await window.openMediaPicker();
+      if (!url) return;
+      const ta = F('pgBody');
+      const tag = `<img src="${url}" alt=""/>`;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = ta.value.slice(0,start) + tag + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + tag.length;
+      if (F('pgPreviewToggle').checked) F('pgPreview').innerHTML = ta.value;
+    };
+
+    F('pageSaveBtn').addEventListener('click', async () => {
+      const body = {
+        title: F('pgTitle').value.trim(),
+        slug: F('pgSlug').value.trim() || undefined,
+        metaTitle: F('pgMetaTitle').value.trim() || null,
+        metaDesc: F('pgMeta').value.trim() || null,
+        ogTitle: F('pgOgTitle').value.trim() || null,
+        ogImage: F('pgOgImage').value.trim() || null,
+        body: F('pgBody').value,
+        isPublished: F('pgPublished').checked,
+        headBannerId: F('pgHeadBanner').value || null,
+        footBannerId: F('pgFootBanner').value || null,
+        headerTemplateId: F('pgHeaderTpl').value || null,
+        footerTemplateId: F('pgFooterTpl').value || null,
+        bannerEnabled:  F('pgBannerEnabled').checked,
+        bannerImageUrl: F('pgBannerImage').value.trim() || null,
+        bannerLinkUrl:  F('pgBannerLink').value.trim()  || null,
+        addToNav: F('pgAddNav').checked,
+        addToFooter: F('pgAddFooter').checked,
+        addToShopNav: F('pgAddShopNav').checked,
+      };
+      if (!body.title) return alert('請填入標題');
+      const url = EDIT_PAGE ? BASE_PAGES + '/' + EDIT_PAGE : BASE_PAGES;
+      const method = EDIT_PAGE ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) {
+        const d = await r.json();
+        return alert(d.error === 'slug_exists' ? 'Slug 已存在' : '儲存失敗');
+      }
+      const saved = await r.json();
+      // Persist blocks for both new and existing pages
+      const pageId = saved.page?.id || EDIT_PAGE;
+      if (pageId && BLOCK_EDITOR) {
+        await fetch(BASE_PAGES + '/' + pageId + '/blocks', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blocks: BLOCK_EDITOR.getBlocks() }),
+        });
+      }
+      closePageModal(); load();
+    });
+
+    window.delPage = async (id) => {
+      if (!confirm('刪除此頁面？(對應的選單項目也會移除)')) return;
+      await fetch(BASE_PAGES + '/' + id, { method:'DELETE' });
+      load();
+    };
+
+    // Nav modal
+    const NAV_TITLES = { MAIN: '頁面主選單', FOOTER: '頁面頁尾', SHOP: '網購主選單' };
+    window.openNavNew = (loc='MAIN') => {
+      EDIT_NAV = null;
+      fillNav({order:100,isActive:true,location:loc});
+      F('navModalTitle').textContent = '新增' + NAV_TITLES[loc] + '項目';
+      F('navModal').classList.remove('hidden');
+    };
+    window.editNav = (it) => {
+      EDIT_NAV = it.id; fillNav(it);
+      F('navModalTitle').textContent = '編輯' + NAV_TITLES[it.location || 'MAIN'] + '項目';
+      F('navModal').classList.remove('hidden');
+    };
+    window.closeNavModal = () => F('navModal').classList.add('hidden');
+    function fillNav(it) {
+      F('nvLabel').value = it.label ?? '';
+      F('nvHref').value = it.href ?? '';
+      F('nvOrder').value = it.order ?? 100;
+      F('nvActive').checked = it.isActive ?? true;
+      F('nvLocation').value = it.location || 'MAIN';
+      F('nvFooterCol').value = it.footerColumn || 'SERVICE';
+      F('nvFooterColRow').classList.toggle('hidden', (it.location || 'MAIN') !== 'FOOTER');
+      F('nvLocation').onchange = () => F('nvFooterColRow').classList.toggle('hidden', F('nvLocation').value !== 'FOOTER');
+    }
+    F('navSaveBtn').addEventListener('click', async () => {
+      const body = {
+        label: F('nvLabel').value.trim(),
+        href:  F('nvHref').value.trim(),
+        order: parseInt(F('nvOrder').value, 10) || 100,
+        isActive: F('nvActive').checked,
+        location: F('nvLocation').value,
+        footerColumn: F('nvFooterCol').value,
+      };
+      if (!body.label || !body.href) return alert('請填入名稱與連結');
+      const url = EDIT_NAV ? BASE_NAV + '/' + EDIT_NAV : BASE_NAV;
+      const method = EDIT_NAV ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!r.ok) return alert('儲存失敗');
+      closeNavModal(); load();
+    });
+    window.delNav = async (id) => {
+      if (!confirm('刪除？')) return;
+      await fetch(BASE_NAV + '/' + id, { method:'DELETE' });
+      load();
+    };
+
+    load();
+  </script>
+</body>
+</html>

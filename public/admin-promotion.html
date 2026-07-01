@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>檔期優惠 · 管理後台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body class="admin bg-slate-100 min-h-screen">
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <a href="/admin.html" class="flex items-center gap-3 mr-6 shrink-0">
+        <img data-content="admin.logo.url" data-content-attr="src" alt="" class="h-8 w-auto hidden"/>
+        <span class="font-bold tracking-wide">管理後台</span>
+      </a>
+      <nav id="adminNav" class="text-sm space-x-5"></nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-6">
+    <div class="flex items-baseline justify-between flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-black">檔期優惠</h1>
+        <p class="text-sm text-slate-500 mt-1">設定 /promotion.html 頁面的標題、活動期間、橫幅，並指定哪些商品出現在「團購優惠」與「本月優惠」區塊。</p>
+      </div>
+      <a href="/promotion.html" target="_blank" class="text-xs text-teal-600 hover:underline">預覽前台 ↗</a>
+    </div>
+
+    <!-- Page settings -->
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold mb-4">頁面設定</h2>
+      <div class="grid sm:grid-cols-2 gap-4 text-sm">
+        <label class="flex items-center gap-2 sm:col-span-2">
+          <input id="fIsActive" type="checkbox"/> <span class="font-semibold">啟用檔期優惠頁面（前台才會看到完整頁面）</span>
+        </label>
+        <div>
+          <label class="text-xs text-slate-500">頁面主標題</label>
+          <input id="fMainTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">副標題 / 活動口號</label>
+          <input id="fSubTitle" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">活動開始日期</label>
+          <input id="fStartDate" type="date" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">活動結束日期 (用於倒數計時器)</label>
+          <input id="fEndDate" type="date" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="text-xs text-slate-500">本月優惠 區塊橫幅 (可選)</label>
+          <div class="flex gap-2 mt-1">
+            <input id="fBanner" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg font-mono text-xs"/>
+            <button type="button" onclick="pickBanner()" class="text-xs bg-slate-900 text-white px-3 rounded">媒體庫</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">「團購優惠」區塊標題</label>
+          <input id="fGroupHeading" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">「本月優惠」區塊標題</label>
+          <input id="fMonthlyHeading" class="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg"/>
+        </div>
+      </div>
+      <div class="mt-5 text-right">
+        <button id="saveSettingsBtn" class="bg-teal-600 text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-teal-700">儲存頁面設定</button>
+      </div>
+    </section>
+
+    <!-- Product flag table -->
+    <section class="bg-white rounded-2xl shadow-sm p-6">
+      <h2 class="font-bold mb-4">商品標記</h2>
+      <p class="text-xs text-slate-500 mb-3">勾選某項商品的「團購」或「本月特價」會自動顯示在前台對應區塊。原價 (priceOriginal) 用於計算折扣 % 與顯示劃線價。</p>
+      <div id="productList" class="overflow-x-auto"><p class="text-sm text-slate-400">載入中…</p></div>
+    </section>
+  </main>
+
+  <script src="/js/admin-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/media-picker.js"></script>
+  <script>
+    const F = (id) => document.getElementById(id);
+
+    async function loadSettings() {
+      const { page } = await fetch('/api/promotion/admin', { cache:'no-store' }).then(r=>r.json());
+      F('fIsActive').checked     = !!page.isActive;
+      F('fMainTitle').value      = page.mainTitle ?? '';
+      F('fSubTitle').value       = page.subTitle ?? '';
+      F('fStartDate').value      = page.startDate ? new Date(page.startDate).toISOString().slice(0,10) : '';
+      F('fEndDate').value        = page.endDate   ? new Date(page.endDate).toISOString().slice(0,10)   : '';
+      F('fBanner').value         = page.monthlyBanner ?? '';
+      F('fGroupHeading').value   = page.groupHeading ?? '團購優惠專區';
+      F('fMonthlyHeading').value = page.monthlyHeading ?? '本月優惠專區';
+    }
+
+    F('saveSettingsBtn').addEventListener('click', async () => {
+      const body = {
+        isActive:       F('fIsActive').checked,
+        mainTitle:      F('fMainTitle').value.trim(),
+        subTitle:       F('fSubTitle').value.trim() || null,
+        startDate:      F('fStartDate').value ? new Date(F('fStartDate').value).toISOString() : null,
+        endDate:        F('fEndDate').value   ? new Date(F('fEndDate').value).toISOString()   : null,
+        monthlyBanner:  F('fBanner').value.trim() || null,
+        groupHeading:   F('fGroupHeading').value.trim(),
+        monthlyHeading: F('fMonthlyHeading').value.trim(),
+      };
+      const r = await fetch('/api/promotion/admin', {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) return alert('儲存失敗');
+      alert('已儲存');
+    });
+
+    window.pickBanner = async () => {
+      const url = await window.openMediaPicker();
+      if (url) F('fBanner').value = url;
+    };
+
+    // Trim full ISO from API (2026-06-24T03:45:00.000Z) into the form input's
+    // local "YYYY-MM-DDTHH:mm" that <input type="datetime-local"> requires.
+    function isoToLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const z = (n) => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+    }
+
+    async function loadProducts() {
+      const { products } = await fetch('/api/promotion/admin/products', { cache:'no-store' }).then(r=>r.json());
+      const rows = products.map((p) => `
+        <tr class="border-t border-slate-100" data-id="${p.id}">
+          <td class="py-2 px-3 text-xs"><span class="font-mono text-slate-500">${p.sku}</span><br><b>${p.nameZh}</b></td>
+          <td class="py-2 px-3 text-right"><input type="number" data-f="priceOriginal" value="${p.priceOriginal ?? ''}" placeholder="${p.priceA}" class="w-24 px-2 py-1 border border-slate-200 rounded text-right text-sm"/></td>
+          <td class="py-2 px-3 text-center"><input type="checkbox" data-f="isGroupBuy" ${p.isGroupBuy?'checked':''}/></td>
+          <td class="py-2 px-3 text-right"><input type="number" data-f="groupBuyTarget" value="${p.groupBuyTarget ?? ''}" placeholder="0" class="w-20 px-2 py-1 border border-slate-200 rounded text-right text-sm"/></td>
+          <td class="py-2 px-3 text-right"><input type="number" data-f="groupBuyCurrent" value="${p.groupBuyCurrent ?? 0}" class="w-20 px-2 py-1 border border-slate-200 rounded text-right text-sm"/></td>
+          <td class="py-2 px-3 text-center"><input type="checkbox" data-f="isMonthlySpecial" ${p.isMonthlySpecial?'checked':''}/></td>
+          <td class="py-2 px-3"><input type="datetime-local" data-f="promoStartsAt" data-type="date" value="${isoToLocal(p.promoStartsAt)}" class="px-2 py-1 border border-slate-200 rounded text-xs"/></td>
+          <td class="py-2 px-3"><input type="datetime-local" data-f="promoEndsAt"   data-type="date" value="${isoToLocal(p.promoEndsAt)}"   class="px-2 py-1 border border-slate-200 rounded text-xs"/></td>
+          <td class="py-2 px-3 text-right"><button class="text-xs bg-teal-600 text-white px-3 py-1 rounded">儲存</button></td>
+        </tr>`).join('');
+      F('productList').innerHTML = `<table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase tracking-wider">
+          <tr><th class="py-2 px-3 text-left">商品</th>
+              <th class="py-2 px-3 text-right">原價</th>
+              <th class="py-2 px-3">團購</th>
+              <th class="py-2 px-3 text-right">目標</th>
+              <th class="py-2 px-3 text-right">已加入</th>
+              <th class="py-2 px-3">本月特價</th>
+              <th class="py-2 px-3">優惠開始</th>
+              <th class="py-2 px-3">優惠結束</th>
+              <th class="py-2 px-3"></th></tr>
+        </thead><tbody>${rows || '<tr><td colspan="9" class="py-6 text-center text-slate-400">尚無商品</td></tr>'}</tbody></table>`;
+      F('productList').querySelectorAll('tbody tr').forEach((row) => {
+        row.querySelector('button').addEventListener('click', async () => {
+          const id = row.dataset.id;
+          const body = {};
+          row.querySelectorAll('[data-f]').forEach((el) => {
+            const f = el.dataset.f;
+            if (el.type === 'checkbox') body[f] = el.checked;
+            else if (el.dataset.type === 'date') body[f] = el.value || null;
+            else if (el.value === '') body[f] = (f === 'groupBuyCurrent') ? 0 : null;
+            else body[f] = parseInt(el.value, 10);
+          });
+          const r = await fetch('/api/promotion/admin/products/' + id, {
+            method:'PUT', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) return alert('儲存失敗');
+          row.style.background = '#dcfce7';
+          setTimeout(() => row.style.background = '', 800);
+        });
+      });
+    }
+
+    loadSettings().then(loadProducts);
+  </script>
+</body>
+</html>

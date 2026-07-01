@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>申請會員 · 資生國際 Shisei Dental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="資生國際"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0d9488"/>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-teal-50 via-white to-slate-50 grid place-items-center px-4 py-10">
+  <div class="w-full max-w-2xl card p-8">
+    <a href="/" class="block mb-8">
+      <img data-content="site.logo.url" data-content-attr="src" alt="" class="h-10 w-auto"/>
+    </a>
+    <h1 id="regTitle" class="text-2xl font-black mb-1" data-content="register.title">申請成為驗證會員</h1>
+    <p id="regSubtitle" class="text-slate-500 text-sm mb-6" data-content="register.subtitle">提交後將由業務團隊審核，通常 1 個工作天內完成。</p>
+
+    <form id="form" class="grid sm:grid-cols-2 gap-4">
+      <div class="sm:col-span-2">
+        <label class="text-xs font-semibold text-slate-600">電子郵件 *</label>
+        <input name="email" type="email" autocomplete="email" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="text-xs font-semibold text-slate-600">密碼 (至少 8 字元) *</label>
+        <input name="password" type="password" autocomplete="new-password" minlength="8" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">負責人姓名 *</label>
+        <input name="name" autocomplete="name" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">聯絡電話</label>
+        <input name="phone" type="tel" inputmode="tel" autocomplete="tel" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">醫師證書 / 診所執照號 *</label>
+        <input name="medicalLicenseNo" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">診所 / 機構名稱 *</label>
+        <input name="clinicName" required class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="text-xs font-semibold text-slate-600">診所地址</label>
+        <input name="clinicAddress" autocomplete="street-address" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">統一編號 (8 碼)</label>
+        <input name="taxId" type="tel" inputmode="numeric" pattern="\d{8}" maxlength="8" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">發票抬頭</label>
+        <input name="companyTitle" class="mt-1 w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"/>
+      </div>
+      <!-- 會員註冊條款與隱私權聲明 -->
+      <div class="sm:col-span-2 mt-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 leading-relaxed max-h-56 overflow-y-auto">
+          <h3 class="font-bold text-slate-800 mb-2">會員註冊條款與隱私權聲明</h3>
+          <ol class="list-decimal pl-5 space-y-2">
+            <li><b>醫療專業身份確認：</b>本平台僅限具有合格醫事執照之專業人員、診所及醫療機構申請。申請人保證所提供之醫師證書及執業執照資訊均為真實。</li>
+            <li><b>商業機密保護：</b>驗證通過後所見之所有產品價格、B2B 批發優惠及促銷活動均屬「資生國際」之商業機密，會員不得將報價洩露予第三方或用於非採購目的之比價。</li>
+            <li><b>個資法告知：</b>您所填寫之個人資料（包含姓名、電話、電子郵件及醫療執照資訊）僅供本公司進行身分審核、訂單處理、物流寄送及售後服務之用。</li>
+            <li><b>審核權限：</b>資生國際保留最終核准會員資格之權利。若資料填寫不全或無法查核真實性，本公司有權拒絕申請或終止服務。</li>
+          </ol>
+        </div>
+
+        <div class="mt-3 space-y-2 text-sm">
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input id="tc1" type="checkbox" class="mt-0.5 h-4 w-4 accent-teal-600 cursor-pointer"/>
+            <span class="text-slate-700">我已閱讀並同意 <b class="text-slate-900">資生國際會員服務條款</b> 與 <b class="text-slate-900">個資蒐集告知事項</b>。</span>
+          </label>
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input id="tc2" type="checkbox" class="mt-0.5 h-4 w-4 accent-teal-600 cursor-pointer"/>
+            <span class="text-slate-700">我確認具備醫療專業身分，且保證所填資料真實無誤。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="sm:col-span-2 mt-2">
+        <button id="submitBtn" disabled class="btn btn-secondary w-full opacity-50 cursor-not-allowed">送出申請</button>
+        <p id="msg" class="text-sm mt-3"></p>
+      </div>
+    </form>
+
+    <div class="my-6 flex items-center gap-3 text-xs text-slate-400">
+      <span class="flex-1 h-px bg-slate-200"></span>或使用第三方快速註冊<span class="flex-1 h-px bg-slate-200"></span>
+    </div>
+
+    <div class="space-y-2.5">
+      <a href="/api/auth/google/start"
+         class="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 py-3 rounded-lg font-semibold transition">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.61z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        <span>使用 Google 註冊</span>
+      </a>
+
+      <a href="/api/auth/line/start"
+         class="w-full flex items-center justify-center gap-3 bg-[#06C755] hover:bg-[#05b34d] text-white py-3 rounded-lg font-semibold transition">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.346 0-.627-.285-.627-.629V8.108c0-.345.281-.63.63-.63h2.383c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.135-.033.196-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+        <span>使用 LINE 註冊</span>
+      </a>
+    </div>
+    <p class="text-center text-[11px] text-slate-400 mt-3">第三方註冊後仍需於會員中心補填醫療執照資訊以通過審核。</p>
+
+    <p class="text-center text-sm text-slate-500 mt-6">
+      已有帳號？ <a href="/login.html" class="text-teal-600 font-semibold">立即登入</a>
+    </p>
+  </div>
+
+  <script src="/js/mobile-menu.js"></script>
+  <script src="/js/auth-nav.js"></script>
+  <script src="/js/content.js"></script>
+  <script src="/js/pwa.js"></script>
+
+  <script>
+    // Submit stays disabled until BOTH consent checkboxes are ticked.
+    const tc1 = document.getElementById('tc1');
+    const tc2 = document.getElementById('tc2');
+    const submitBtn = document.getElementById('submitBtn');
+    function refreshSubmit() {
+      const ok = tc1.checked && tc2.checked;
+      submitBtn.disabled = !ok;
+      submitBtn.classList.toggle('opacity-50', !ok);
+      submitBtn.classList.toggle('cursor-not-allowed', !ok);
+    }
+    tc1.addEventListener('change', refreshSubmit);
+    tc2.addEventListener('change', refreshSubmit);
+
+    // OAuth completion flow — hides B2B fields, prefills email/name, submits to /register/oauth
+    (function() {
+      const params = new URLSearchParams(location.search);
+      const flow = params.get('flow');
+      if (flow !== 'google' && flow !== 'line') return;
+      const sub = params.get('sub');
+      const email = params.get('email') || '';
+      const name = params.get('name') || '';
+
+      const titleEl = document.getElementById('regTitle');
+      const subEl = document.getElementById('regSubtitle');
+      // Remove data-content so content.js doesn't overwrite our OAuth-flow copy
+      titleEl.removeAttribute('data-content');
+      subEl.removeAttribute('data-content');
+      titleEl.textContent = flow === 'google' ? '使用 Google 帳號完成申請' : '使用 LINE 帳號完成申請';
+      subEl.textContent = '確認 Email 與姓名後送出，帳號將待管理員審核通過後啟用。';
+
+      const form = document.getElementById('form');
+      const eEl = form.querySelector('input[name="email"]');
+      eEl.value = email; eEl.readOnly = true;
+      eEl.classList.add('bg-slate-50', 'text-slate-500');
+      form.querySelector('input[name="name"]').value = name;
+
+      ['password','phone','medicalLicenseNo','clinicName','clinicAddress','taxId','companyTitle'].forEach(n => {
+        const el = form.querySelector('[name="' + n + '"]');
+        if (!el) return;
+        el.required = false;
+        const container = el.closest('div');
+        if (container) container.style.display = 'none';
+      });
+      setTimeout(() => form.querySelector('input[name="name"]').focus(), 100);
+
+      // Capture-phase listener intercepts BEFORE the default (email) handler runs
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (!tc1.checked || !tc2.checked) return;
+        const body = { provider: flow, sub, email, name: form.querySelector('input[name="name"]').value.trim() };
+        const r = await fetch('/api/auth/register/oauth', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json().catch(() => ({}));
+        const msg = document.getElementById('msg');
+        if (r.ok) {
+          msg.className = 'text-sm mt-3 text-teal-700';
+          msg.textContent = '申請已送出，將於審核通過後啟用。即將前往登入頁…';
+          setTimeout(() => location.href = '/login.html', 1800);
+        } else {
+          msg.className = 'text-sm mt-3 text-red-600';
+          msg.textContent = d.error === 'account_exists' ? '此帳號已存在，請直接登入'
+                          : d.error === 'email_exists' ? '此 Email 已被使用'
+                          : '送出失敗，請稍後再試';
+        }
+      }, { capture: true });
+    })();
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = Object.fromEntries(new FormData(e.target));
+      const res = await fetch('/api/auth/register', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(fd),
+      });
+      const data = await res.json();
+      const msg = document.getElementById('msg');
+      if (res.ok) {
+        msg.className = 'text-sm mt-3 text-teal-700';
+        msg.textContent = '申請已送出，將於審核完成後通知您。即將前往登入頁…';
+        setTimeout(() => location.href = '/login.html', 1800);
+      } else {
+        msg.className = 'text-sm mt-3 text-red-600';
+        msg.textContent = data.error === 'email_exists' ? '此 Email 已被註冊' : '送出失敗，請檢查欄位';
+      }
+    });
+  </script>
+
+  <footer class="bg-white py-6 mt-8 w-full text-center">
+    <p class="text-xs text-slate-500" data-content="footer.copyright">© 2026 資生國際有限公司 Shisei International Limited. 統一編號: 28343724</p>
+  </footer>
+</body>
+</html>

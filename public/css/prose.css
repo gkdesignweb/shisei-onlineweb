@@ -1,0 +1,33 @@
+/* Shared "prose" styles used by:
+ *   - The server-rendered /p/:slug template (inline copy)
+ *   - The admin page editor preview pane
+ *   - The product long-description preview pane
+ *   - The product detail page long description
+ * Matches what the public /p/:slug renderer outputs so the preview = the live page.
+ */
+.prose h1 { font-size: 2.25rem; font-weight: 900; margin: 1.5rem 0 1rem; color: #0f172a; }
+.prose h2 { font-size: 1.5rem;  font-weight: 800; margin: 1.5rem 0 .75rem; color: #0f172a; }
+.prose h3 { font-size: 1.25rem; font-weight: 700; margin: 1.25rem 0 .5rem; color: #0f172a; }
+.prose p  { line-height: 1.8; color: #334155; margin: .75rem 0; }
+.prose ul, .prose ol { margin: .75rem 0 .75rem 1.5rem; line-height: 1.8; color: #334155; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose a  { color: #0d9488; text-decoration: underline; }
+.prose img { border-radius: 1rem; margin: 1.5rem 0; max-width: 100%; height: auto; }
+.prose strong { color: #0f172a; }
+.prose em     { font-style: italic; }
+.prose hr     { margin: 2rem 0; border-color: #e2e8f0; }
+.prose blockquote {
+  border-left: 4px solid #0d9488;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #475569;
+  font-style: italic;
+}
+.prose code {
+  background: #f1f5f9;
+  padding: .15rem .35rem;
+  border-radius: .25rem;
+  font-size: .85em;
+  color: #be185d;
+}
