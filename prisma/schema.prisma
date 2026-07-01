@@ -2,7 +2,10 @@
 // is enforced in app code — kept as String for portability and to avoid
 // migration churn when adding new statuses.
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Vercel serverless runs Amazon Linux 2 with OpenSSL 3.x — Prisma must
+  // ship a binary compiled for that target, not just the developer's mac.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
