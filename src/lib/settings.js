@@ -152,6 +152,10 @@ export const SETTINGS_SCHEMA = [
     type: 'text', isSecret: false,
     default: '',
     help: 'Project Settings → API → Publishable key（sb_publishable_…）。前端可使用，無資料庫權限。' },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', group: 'database', label: 'Supabase Service Role Key',
+    type: 'text', isSecret: true,
+    default: '',
+    help: 'Project Settings → API → service_role key。伺服器端上傳檔案到 Storage 使用（繞過 RLS）。切勿暴露於前端。' },
 ];
 
 const ECPAY_URL_PAIRS = {
