@@ -274,6 +274,8 @@
       if (params.get('googleOk'))     showActionBanner('✓ Google 帳號已連結');
       if (params.get('googleErr') === 'already_linked')
         showActionBanner('此 Google 帳號已連結到其他會員，請改用別的 Google 帳號。', 'error');
+      // Deep-link from the auth-pill dropdown: ?openPassword=1 pops the modal
+      if (params.get('openPassword')) setTimeout(() => openPassword(), 0);
 
       const me = await fetch('/api/auth/me').then(r=>r.json());
       if (!me.user) {

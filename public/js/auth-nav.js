@@ -52,9 +52,8 @@
         </div>
         ${isStaff ? `
           <a href="/admin.html" class="block px-4 py-2 hover:bg-slate-50">後台總覽</a>` : ''}
-        <a href="/account.html" class="block px-4 py-2 hover:bg-slate-50">更新資料</a>
-        <a href="/account.html#change-password" class="block px-4 py-2 hover:bg-slate-50">更換密碼</a>
         <a href="/account.html" class="block px-4 py-2 hover:bg-slate-50">會員中心</a>
+        <a href="/account.html?openPassword=1" class="block px-4 py-2 hover:bg-slate-50">更換密碼</a>
         <button type="button" data-logout class="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-600 border-t border-slate-100">登出</button>
       </div>`;
     const trigger = host.querySelector('button');
