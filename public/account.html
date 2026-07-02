@@ -229,10 +229,21 @@
 
     async function load() {
       // Defensive: no matter what happens inside load(), main stays visible.
-      // Errors get logged so we can debug via DevTools but don't blank the page.
       document.getElementById('acctMain').style.visibility = '';
       try { return await loadInner(); }
-      catch (e) { console.error('[account load]', e); }
+      catch (e) {
+        console.error('[account load]', e);
+        // Surface the error inline so users don't see a blank member center
+        // and can screenshot the message when reporting bugs.
+        const host = document.getElementById('acctMain');
+        if (host && !document.getElementById('acctLoadErr')) {
+          const div = document.createElement('div');
+          div.id = 'acctLoadErr';
+          div.className = 'p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-800';
+          div.innerHTML = `<b>載入失敗</b>：${(e?.message || e).toString()} <button onclick="location.reload()" class="ml-2 underline">重新整理</button>`;
+          host.prepend(div);
+        }
+      }
     }
     async function loadInner() {
       const params = new URLSearchParams(location.search);
