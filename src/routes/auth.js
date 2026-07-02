@@ -114,7 +114,7 @@ authRouter.get('/me', async (req, res) => {
   if (!req.user) return res.json({ user: null });
   const { id, email, name, phone, role, tier, verificationStatus,
           medicalLicenseNo, clinicName, clinicAddress,
-          taxId, companyTitle, lineUserId, pendingEmail,
+          taxId, companyTitle, lineUserId, googleId, pendingEmail,
           canMonthlyPay,
           isSuperAdmin, isActive, staffRoleId, staffRole } = req.user;
   const permissions = [...await getUserPermissions(req.user)];
@@ -122,6 +122,7 @@ authRouter.get('/me', async (req, res) => {
     user: { id, email, name, phone, role, tier, verificationStatus,
             medicalLicenseNo, clinicName, clinicAddress, taxId, companyTitle,
             lineLinked: !!lineUserId,
+            googleLinked: !!googleId,
             pendingEmail, canMonthlyPay,
             isSuperAdmin, isActive, staffRoleId,
             staffRoleName: staffRole?.name ?? null,
@@ -514,6 +515,19 @@ authRouter.post('/me/line/unlink', requireAuth, async (req, res) => {
   await prisma.user.update({
     where: { id: req.user.id },
     data: { lineUserId: null },
+  });
+  res.json({ ok: true });
+});
+
+authRouter.post('/me/google/unlink', requireAuth, async (req, res) => {
+  // Refuse if the user has no password AND no other social identity — otherwise
+  // they'd lock themselves out entirely.
+  if (!req.user.passwordHash && !req.user.lineUserId) {
+    return res.status(409).json({ error: 'last_auth_method' });
+  }
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { googleId: null },
   });
   res.json({ ok: true });
 });
