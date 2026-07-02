@@ -30,6 +30,20 @@
         clearTimeout(timer);
         if (!d.user) {
           location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+        } else {
+          // Reveal the member sections as soon as auth is confirmed. Body-level
+          // load() may still error partway through populating dynamic content,
+          // but the static section headers will always be visible so the page
+          // never looks "down" for a signed-in user.
+          const revealMain = () => {
+            const m = document.getElementById('acctMain');
+            if (m) m.style.visibility = '';
+          };
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', revealMain, { once: true });
+          } else {
+            revealMain();
+          }
         }
       } catch {
         done = true;
@@ -214,6 +228,13 @@
     }
 
     async function load() {
+      // Defensive: no matter what happens inside load(), main stays visible.
+      // Errors get logged so we can debug via DevTools but don't blank the page.
+      document.getElementById('acctMain').style.visibility = '';
+      try { return await loadInner(); }
+      catch (e) { console.error('[account load]', e); }
+    }
+    async function loadInner() {
       const params = new URLSearchParams(location.search);
       if (params.get('paid')) {
         const b = document.getElementById('paidBanner');
