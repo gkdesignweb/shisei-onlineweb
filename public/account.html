@@ -386,7 +386,10 @@
       if (s === 'PENDING_PAYMENT') return 'bg-amber-100 text-amber-700';
       return 'bg-slate-100 text-slate-600';
     }
-    document.getElementById('logout').addEventListener('click', async () => {
+    // Legacy #logout button was removed from the header — logout now lives in
+    // the auth-pill dropdown (auth-nav.js). Guard the lookup so the script
+    // doesn't halt with a null-deref, which would prevent load() from firing.
+    document.getElementById('logout')?.addEventListener('click', async () => {
       await fetch('/api/auth/logout', { method:'POST' });
       location.href = '/';
     });
