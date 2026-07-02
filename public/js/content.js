@@ -66,46 +66,6 @@
       .forEach((el) => el.classList.add('hidden'));
   }
 
-  const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => ({}));
-  if (me?.user?.role !== 'MANAGER' && !me?.user?.isSuperAdmin) return;
-
-  const btn = document.createElement('button');
-  btn.id = 'cms-edit-toggle';
-  btn.textContent = '✏️ 編輯內容';
-  Object.assign(btn.style, {
-    position: 'fixed', right: '20px', bottom: '20px', zIndex: 9999,
-    background: '#0f766e', color: 'white', border: 'none',
-    padding: '10px 16px', borderRadius: '999px', fontWeight: '700',
-    fontSize: '14px', boxShadow: '0 10px 25px rgba(15,118,110,.35)', cursor: 'pointer',
-  });
-  document.body.appendChild(btn);
-
-  let editing = false;
-  btn.addEventListener('click', () => {
-    editing = !editing;
-    btn.textContent = editing ? '✅ 完成編輯' : '✏️ 編輯內容';
-    btn.style.background = editing ? '#dc2626' : '#0f766e';
-    document.querySelectorAll('[data-content]').forEach((el) => {
-      if (el.dataset.contentAttr) return;
-      el.contentEditable = editing ? 'true' : 'false';
-      el.style.outline = editing ? '2px dashed #14b8a6' : '';
-      el.style.borderRadius = editing ? '4px' : '';
-      el.style.padding = editing ? '2px 4px' : '';
-      if (editing && !el.dataset.cmsBound) {
-        el.dataset.cmsBound = '1';
-        el.addEventListener('blur', async () => {
-          const key = el.dataset.content;
-          const valueZh = el.innerText;
-          await fetch('/api/content/admin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              key, group: key.split('.')[0] ?? 'misc',
-              label: key, valueZh, kind: 'text',
-            }),
-          });
-        });
-      }
-    });
-  });
+  // Inline "編輯內容" floating button was removed per spec —
+  // admins now edit copy exclusively through /admin-content.html.
 })();
