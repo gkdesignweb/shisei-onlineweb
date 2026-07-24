@@ -22,6 +22,7 @@ export function signSession(user) {
 export function setSessionCookie(res, token) {
   res.cookie('session', token, {
     httpOnly: true, sameSite: 'lax',
+    secure: config.env === 'production',
     maxAge: SESSION_MAX_AGE_MS,
   });
 }

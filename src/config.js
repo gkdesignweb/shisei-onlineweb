@@ -1,5 +1,8 @@
 import 'dotenv/config';
 
+const env = process.env.NODE_ENV ?? 'development';
+const isProd = env === 'production';
+
 const required = (key, fallback) => {
   const v = process.env[key] ?? fallback;
   if (v === undefined || v === '') {
@@ -8,11 +11,23 @@ const required = (key, fallback) => {
   return v;
 };
 
+// Secrets that must never fall back to a hardcoded value in production —
+// a missing JWT_SECRET would let any attacker forge sessions.
+const requireSecret = (key, devFallback) => {
+  const v = process.env[key];
+  if (v && v.length > 0) return v;
+  if (isProd) {
+    throw new Error(`[config] ${key} is required in production`);
+  }
+  console.warn(`[config] ${key} not set — using dev fallback`);
+  return devFallback;
+};
+
 export const config = {
-  env: process.env.NODE_ENV ?? 'development',
+  env,
   port: parseInt(process.env.PORT ?? '3000', 10),
   appUrl: required('APP_URL', 'http://localhost:3000'),
-  jwtSecret: required('JWT_SECRET', 'dev-only-jwt-secret'),
+  jwtSecret: requireSecret('JWT_SECRET', 'dev-only-jwt-secret'),
 
   ecpay: {
     merchantId:    required('ECPAY_MERCHANT_ID', '2000132'),

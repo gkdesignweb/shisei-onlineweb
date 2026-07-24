@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { z } from 'zod';
+import { config } from '../config.js';
 import { prisma } from '../db.js';
 import { signSession, setSessionCookie, SESSION_MAX_AGE_MS, requireAuth } from '../middleware/auth.js';
 import { getUserPermissions } from '../lib/permissions.js';
@@ -134,9 +135,9 @@ authRouter.get('/me', async (req, res) => {
 // the currently signed-in user instead of finding/creating one.
 authRouter.get('/line/start', async (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
-  res.cookie('line_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  res.cookie('line_state', state, { httpOnly: true, sameSite: 'lax', secure: config.env === 'production', maxAge: 10 * 60 * 1000 });
   if (req.query.link === '1' && req.user) {
-    res.cookie('line_link_user_id', req.user.id, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+    res.cookie('line_link_user_id', req.user.id, { httpOnly: true, sameSite: 'lax', secure: config.env === 'production', maxAge: 10 * 60 * 1000 });
   }
   res.redirect(await buildLineLoginUrl(state));
 });
@@ -194,9 +195,9 @@ authRouter.get('/line/callback', async (req, res) => {
 authRouter.get('/google/start', async (req, res) => {
   try {
     const state = crypto.randomBytes(16).toString('hex');
-    res.cookie('google_state', state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+    res.cookie('google_state', state, { httpOnly: true, sameSite: 'lax', secure: config.env === 'production', maxAge: 10 * 60 * 1000 });
     if (req.query.link === '1' && req.user) {
-      res.cookie('google_link_user_id', req.user.id, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+      res.cookie('google_link_user_id', req.user.id, { httpOnly: true, sameSite: 'lax', secure: config.env === 'production', maxAge: 10 * 60 * 1000 });
     }
     res.redirect(await buildGoogleLoginUrl(state));
   } catch (e) {
@@ -227,8 +228,10 @@ authRouter.get('/google/callback', async (req, res) => {
     }
 
     // Find by googleId first, fall back to matching email (auto-link existing accounts).
+    // Only trust the email for auto-linking when Google confirms it's verified —
+    // otherwise an attacker with an unverified matching email could take over the account.
     let user = await prisma.user.findUnique({ where: { googleId: profile.sub } });
-    if (!user && profile.email) {
+    if (!user && profile.email && profile.email_verified === true) {
       const byEmail = await prisma.user.findUnique({ where: { email: profile.email } });
       if (byEmail) {
         user = await prisma.user.update({
